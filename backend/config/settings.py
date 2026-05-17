@@ -18,6 +18,11 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'apps.users',
+    'apps.fitness',
+    'apps.nutrition',
+    'apps.ai_module',
+    'apps.equipment',
+    'apps.analytics',
 ]
 
 MIDDLEWARE = [
@@ -82,3 +87,6 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Manila'
 USE_I18N = True
 USE_TZ = True
+
+from decouple import config as decouple_config
+GEMINI_API_KEY = decouple_config('GEMINI_API_KEY', default='')
