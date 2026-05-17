@@ -90,3 +90,19 @@ USE_TZ = True
 
 from decouple import config as decouple_config
 GEMINI_API_KEY = decouple_config('GEMINI_API_KEY', default='')
+
+import dj_database_url as _dj_db_url
+
+_db_url = config('DATABASE_URL', default='')
+if _db_url:
+    DATABASES['default'] = _dj_db_url.parse(_db_url, conn_max_age=600)
+
+MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True

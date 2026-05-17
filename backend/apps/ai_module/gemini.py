@@ -1,10 +1,11 @@
 import json
 import re
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from django.conf import settings
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
-_model = genai.GenerativeModel('gemini-1.5-flash')
+_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+_MODEL = 'gemini-2.0-flash'
 
 _FITNESS_PROMPT = """
 You are a certified personal trainer. Generate a personalized weekly workout plan in JSON format only.
@@ -84,7 +85,7 @@ def generate_fitness_plan(*, age, weight_kg, height_cm, gender, fitness_goal, ac
         age=age, weight_kg=weight_kg, height_cm=height_cm, gender=gender,
         fitness_goal=fitness_goal, activity_level=activity_level, bmr=bmr, bmi=bmi,
     )
-    response = _model.generate_content(prompt)
+    response = _client.models.generate_content(model=_MODEL, contents=prompt)
     return _parse_json_response(response.text)
 
 
@@ -93,7 +94,7 @@ def generate_nutrition_plan(*, age, weight_kg, height_cm, gender, fitness_goal, 
         age=age, weight_kg=weight_kg, height_cm=height_cm, gender=gender,
         fitness_goal=fitness_goal, activity_level=activity_level, bmr=bmr, bmi=bmi,
     )
-    response = _model.generate_content(prompt)
+    response = _client.models.generate_content(model=_MODEL, contents=prompt)
     return _parse_json_response(response.text)
 
 
@@ -107,6 +108,6 @@ def analyze_food_image(image_bytes: bytes, mime_type: str = 'image/jpeg'):
   "total_fat_g": 0,
   "confidence": "low"
 }"""
-    image_part = {'mime_type': mime_type, 'data': image_bytes}
-    response = _model.generate_content([prompt, image_part])
+    image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+    response = _client.models.generate_content(model=_MODEL, contents=[prompt, image_part])
     return _parse_json_response(response.text)
