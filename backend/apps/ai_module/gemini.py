@@ -7,6 +7,7 @@ from django.conf import settings
 _client = genai.Client(api_key=settings.GEMINI_API_KEY)
 _MODEL = 'gemini-2.5-flash'
 
+# ── #3 Exercise Guide + Weight Suggestion + #3.1 Safety Warning ───────────────
 _FITNESS_PROMPT = """
 You are a certified personal trainer. Generate a personalized weekly workout plan in JSON format only.
 
@@ -20,11 +21,25 @@ User profile:
 - BMI: {bmi}
 - BMR: {bmr} kcal/day
 
+SAFETY RULES:
+- For heavy compound lifts (bench press, squat, deadlift, overhead press), set needs_spotter to true.
+- suggested_weight_kg should be appropriate for a beginner-intermediate at this user's body weight.
+- instructions should be 1-2 sentences on proper form.
+
 Return ONLY valid JSON with this structure:
 {{
   "goal": "string",
+  "safety_note": "Always warm up for 5-10 minutes. Use a spotter or safety bars for heavy lifts. Stop immediately if you feel sharp pain.",
   "weekly_schedule": {{
-    "monday": [{{"exercise": "name", "sets": 3, "reps": 10, "rest_seconds": 60}}],
+    "monday": [{{
+      "exercise": "name",
+      "sets": 3,
+      "reps": 10,
+      "rest_seconds": 60,
+      "suggested_weight_kg": 20,
+      "instructions": "Brief form cue for this exercise.",
+      "needs_spotter": false
+    }}],
     "tuesday": "rest",
     "wednesday": [],
     "thursday": "rest",
@@ -37,8 +52,9 @@ Return ONLY valid JSON with this structure:
 }}
 """
 
+# ── #2 Pinoy Meal Plan ────────────────────────────────────────────────────────
 _NUTRITION_PROMPT = """
-You are a registered nutritionist. Generate a personalized daily meal plan in JSON format only.
+You are a registered nutritionist specializing in Filipino cuisine. Generate a personalized daily meal plan using traditional Filipino foods.
 
 User profile:
 - Age: {age} years
@@ -50,6 +66,10 @@ User profile:
 - BMI: {bmi}
 - BMR: {bmr} kcal/day
 
+Use authentic Filipino foods such as: kanin (steamed rice), bangus (milkfish), tilapia, tinola, sinigang, adobo (chicken/pork), monggo soup, ensaladang talong, ampalaya, kamote, taho, pandesal, lugaw, champorado, pinakbet, paksiw, grilled liempo, itlog (egg), tokwa (tofu), pechay, kangkong, sayote, ube, calamansi juice, buko (coconut water), etc.
+
+Prioritize locally available, affordable Filipino ingredients. Balance macros while keeping meals culturally appropriate.
+
 Return ONLY valid JSON with this structure:
 {{
   "calories": 0,
@@ -57,7 +77,7 @@ Return ONLY valid JSON with this structure:
   "carbs_g": 0,
   "fat_g": 0,
   "meals": {{
-    "breakfast": [{{"food": "name", "portion": "amount", "calories": 0}}],
+    "breakfast": [{{"food": "Filipino food name", "portion": "amount in Filipino serving sizes", "calories": 0}}],
     "lunch": [],
     "dinner": [],
     "snacks": []
@@ -99,7 +119,7 @@ def generate_nutrition_plan(*, age, weight_kg, height_cm, gender, fitness_goal, 
 
 
 def analyze_food_image(image_bytes: bytes, mime_type: str = 'image/jpeg'):
-    prompt = """Analyze this food image and return ONLY valid JSON:
+    prompt = """Analyze this food image and return ONLY valid JSON. Focus on Filipino foods if present.
 {
   "foods_detected": [{"name": "string", "portion_estimate": "string", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}],
   "total_calories": 0,
