@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import AppLayout from '../components/AppLayout'
 import useAuthStore from '../store/authStore'
 import useFitnessStore from '../store/fitnessStore'
 import api from '../api'
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-surface border border-border-mid rounded-lg px-3 py-2 text-sm shadow-glow-sm">
+      <p className="text-text-muted text-xs mb-1">{label}</p>
+      <p className="text-primary font-semibold">{payload[0].value} kg</p>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const { user } = useAuthStore()
@@ -19,50 +29,90 @@ export default function Dashboard() {
   const chartData = [...bodyMetrics]
     .reverse()
     .slice(-12)
-    .map(m => ({ date: m.date, weight: m.weight_kg }))
+    .map(m => ({ date: m.date?.slice(5), weight: m.weight_kg }))
 
   const profile = user?.profile
 
+  const stats = [
+    { label: 'BMI', value: profile?.bmi ?? '—', sub: 'Body Mass Index' },
+    { label: 'BMR', value: profile?.bmr ? `${profile.bmr}` : '—', sub: 'kcal / day' },
+    { label: 'Goal', value: profile?.fitness_goal?.replace(/_/g, ' ') ?? '—', sub: 'Current target' },
+    { label: 'Status', value: profile?.membership_status ?? '—', sub: 'Membership', isBadge: true },
+  ]
+
   return (
     <AppLayout>
-      <h1 className="text-2xl font-bold text-white mb-6">
-        Welcome back, {user?.first_name}
-      </h1>
+      {/* Header */}
+      <div className="mb-8">
+        <p className="text-text-muted text-sm font-medium mb-1 uppercase tracking-widest">Welcome back</p>
+        <h1 className="font-display text-5xl text-text-base tracking-wide uppercase">
+          {user?.first_name} {user?.last_name}
+        </h1>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="h-px flex-1 max-w-16 bg-primary/40 rounded" />
+          <span className="text-text-dim text-xs tracking-widest uppercase">Your Dashboard</span>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: 'BMI', value: profile?.bmi ?? '—' },
-          { label: 'BMR', value: profile?.bmr ? `${profile.bmr} kcal` : '—' },
-          { label: 'Goal', value: profile?.fitness_goal?.replace('_', ' ') ?? '—' },
-          { label: 'Membership', value: profile?.membership_status ?? '—' },
-        ].map(({ label, value }) => (
-          <div key={label} className="bg-surface border border-accent/20 rounded-xl p-4">
-            <p className="text-text-muted text-xs uppercase tracking-wide">{label}</p>
-            <p className="text-white font-semibold mt-1 capitalize">{value}</p>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {stats.map(({ label, value, sub, isBadge }) => (
+          <div key={label} className="stat-card group">
+            <span className="stat-label">{label}</span>
+            {isBadge ? (
+              <span className={value === 'active' ? 'badge-active self-start' : 'badge-pending self-start'}>
+                {value}
+              </span>
+            ) : (
+              <span className="stat-value">{value}</span>
+            )}
+            <span className="text-text-dim text-[10px] uppercase tracking-wider">{sub}</span>
           </div>
         ))}
       </div>
 
-      <div className="bg-surface border border-accent/20 rounded-xl p-6 mb-6">
-        <h2 className="text-white font-semibold mb-4">Weight Progress (kg)</h2>
+      {/* Weight Chart */}
+      <div className="card p-6 mb-5">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-text-base font-semibold">Weight Progress</h2>
+            <p className="text-text-muted text-xs mt-0.5">Last 12 measurements</p>
+          </div>
+          {chartData.length > 0 && (
+            <span className="text-primary font-semibold text-sm">
+              {chartData[chartData.length - 1]?.weight} kg
+            </span>
+          )}
+        </div>
         {loading ? (
-          <div className="h-40 flex items-center justify-center text-text-muted text-sm">Loading…</div>
+          <div className="space-y-2 py-4">
+            <div className="shimmer-line" />
+            <div className="shimmer-line w-3/4" />
+            <div className="shimmer-line w-1/2" />
+          </div>
         ) : chartData.length === 0 ? (
-          <div className="h-40 flex items-center justify-center text-text-muted text-sm">
-            No weight data yet. Log your first measurement below.
+          <div className="h-40 flex flex-col items-center justify-center gap-2 text-text-muted">
+            <span className="text-3xl opacity-30">📈</span>
+            <span className="text-sm">No weight data yet. Log below.</span>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={chartData}>
-              <XAxis dataKey="date" tick={{ fill: '#C2C0B6', fontSize: 11 }} />
-              <YAxis tick={{ fill: '#C2C0B6', fontSize: 11 }} domain={['auto', 'auto']} />
-              <Tooltip contentStyle={{ background: '#1A1A18', border: '1px solid #5DCAA5', borderRadius: 8 }} />
-              <Line type="monotone" dataKey="weight" stroke="#5DCAA5" strokeWidth={2} dot={false} />
+            <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+              <CartesianGrid stroke="rgba(0,230,118,0.05)" strokeDasharray="4 4" />
+              <XAxis dataKey="date" tick={{ fill: '#7DAE8A', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#7DAE8A', fontSize: 10 }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
+              <Tooltip content={<CustomTooltip />} />
+              <Line
+                type="monotone" dataKey="weight" stroke="#00E676" strokeWidth={2}
+                dot={{ fill: '#00E676', r: 3, strokeWidth: 0 }}
+                activeDot={{ fill: '#00E676', r: 5, strokeWidth: 2, stroke: 'rgba(0,230,118,0.3)' }}
+              />
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
 
+      {/* Log Form */}
       <LogWeightForm onLogged={addBodyMetric} />
     </AppLayout>
   )
@@ -72,6 +122,7 @@ function LogWeightForm({ onLogged }) {
   const [weight, setWeight] = useState('')
   const [bodyFat, setBodyFat] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -86,34 +137,40 @@ function LogWeightForm({ onLogged }) {
       onLogged(data)
       setWeight('')
       setBodyFat('')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="bg-surface border border-accent/20 rounded-xl p-6">
-      <h2 className="text-white font-semibold mb-4">Log Today's Measurements</h2>
+    <div className="card p-6">
+      <h2 className="text-text-base font-semibold mb-4">Log Today's Measurements</h2>
       <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="block text-xs text-text-muted mb-1">Weight (kg)</label>
+        <div className="flex-1 min-w-28">
+          <label className="block text-xs text-text-muted mb-1.5 uppercase tracking-wider">Weight (kg)</label>
           <input
-            type="number" step="0.1" required value={weight} onChange={e => setWeight(e.target.value)}
-            className="bg-bg border border-accent/30 rounded-lg px-3 py-2 text-white w-28 focus:outline-none focus:border-accent"
+            type="number" step="0.1" required value={weight}
+            onChange={e => setWeight(e.target.value)}
+            placeholder="70.5"
+            className="inp"
           />
         </div>
-        <div>
-          <label className="block text-xs text-text-muted mb-1">Body Fat % (optional)</label>
+        <div className="flex-1 min-w-28">
+          <label className="block text-xs text-text-muted mb-1.5 uppercase tracking-wider">Body Fat % <span className="text-text-dim">(optional)</span></label>
           <input
-            type="number" step="0.1" value={bodyFat} onChange={e => setBodyFat(e.target.value)}
-            className="bg-bg border border-accent/30 rounded-lg px-3 py-2 text-white w-28 focus:outline-none focus:border-accent"
+            type="number" step="0.1" value={bodyFat}
+            onChange={e => setBodyFat(e.target.value)}
+            placeholder="15.0"
+            className="inp"
           />
         </div>
         <button
           type="submit" disabled={saving}
-          className="bg-primary hover:bg-primary/80 disabled:opacity-50 text-white px-5 py-2 rounded-lg transition text-sm"
+          className={`btn-primary shrink-0 ${saved ? 'bg-primary/80' : ''}`}
         >
-          {saving ? 'Saving…' : 'Log'}
+          {saved ? '✓ Logged' : saving ? 'Saving…' : 'Log'}
         </button>
       </form>
     </div>

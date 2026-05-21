@@ -3,9 +3,9 @@ import BottomNav from './BottomNav'
 
 export default function AppLayout({ children }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen relative">
       <Sidebar />
-      <main className="flex-1 max-w-6xl mx-auto px-4 py-6 pb-20 md:pb-6 w-full">
+      <main className="flex-1 relative z-10 px-5 py-7 pb-24 md:pb-8 max-w-5xl w-full mx-auto page-enter">
         {children}
       </main>
       <BottomNav />

@@ -66,45 +66,75 @@ export default function Chatbot() {
     api.post('/api/ai/chat/session/').then(({ data }) => setSessionId(data.id))
   }
 
+  const PROMPTS = ['Best exercises for weight loss?', 'How much protein should I eat?', 'What is progressive overload?']
+
   return (
     <AppLayout>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-white">AI Fitness Chat</h1>
-        <button onClick={handleNewChat} className="text-sm text-text-muted hover:text-accent transition">New Chat</button>
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <p className="text-text-muted text-xs uppercase tracking-widest mb-1">Powered by Gemini</p>
+          <h1 className="page-title">AI Fitness Chat</h1>
+        </div>
+        <button onClick={handleNewChat}
+          className="text-sm text-text-dim hover:text-text-muted transition-colors border border-border-soft rounded-lg px-3 py-1.5">
+          + New Chat
+        </button>
       </div>
-      <DisclaimerBanner message="AI responses may be inaccurate (hallucinations). Do not use as medical advice." />
 
-      <div className="bg-surface border border-accent/20 rounded-xl flex flex-col" style={{ height: '60vh' }}>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <DisclaimerBanner message="AI responses may be inaccurate. Do not use as medical advice." />
+
+      {/* Chat container */}
+      <div className="card flex flex-col" style={{ height: '62vh' }}>
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {messages.length === 0 && (
-            <p className="text-text-muted text-sm text-center mt-8">Ask me anything about workouts, nutrition, or gym equipment!</p>
+            <div className="flex flex-col items-center justify-center h-full gap-4 pb-4">
+              <div className="text-5xl opacity-30">🤖</div>
+              <p className="text-text-muted text-sm">Ask anything about fitness & nutrition</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {PROMPTS.map(p => (
+                  <button key={p} onClick={() => setInput(p)}
+                    className="text-xs text-text-muted border border-border-soft rounded-full px-3 py-1.5 hover:border-primary/30 hover:text-primary transition-all">
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
+
           {messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-xs md:max-w-md px-4 py-2 rounded-2xl text-sm ${
-                msg.role === 'user'
-                  ? 'bg-primary text-white rounded-br-sm'
-                  : 'bg-bg border border-accent/20 text-white rounded-bl-sm'
+            <div key={i} className={`flex items-end gap-2 animate-fade-up ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.role === 'assistant' && (
+                <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-xs shrink-0">🤖</div>
+              )}
+              <div className={`max-w-xs md:max-w-lg px-4 py-3 text-sm leading-relaxed ${
+                msg.role === 'user' ? 'bubble-user' : 'bubble-ai text-text-base'
               }`}>
                 {msg.content}
               </div>
             </div>
           ))}
+
           {sending && (
-            <div className="flex justify-start">
-              <div className="bg-bg border border-accent/20 px-4 py-2 rounded-2xl rounded-bl-sm text-text-muted text-sm">Thinking…</div>
+            <div className="flex items-end gap-2">
+              <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-xs">🤖</div>
+              <div className="bubble-ai text-text-muted text-sm px-4 py-3 flex items-center gap-1">
+                <span className="animate-pulse-soft">●</span>
+                <span className="animate-pulse-soft" style={{animationDelay:'0.2s'}}>●</span>
+                <span className="animate-pulse-soft" style={{animationDelay:'0.4s'}}>●</span>
+              </div>
             </div>
           )}
           <div ref={bottomRef} />
         </div>
-        <form onSubmit={handleSend} className="flex gap-2 p-4 border-t border-accent/10">
+
+        {/* Input */}
+        <form onSubmit={handleSend} className="flex gap-2 p-4 border-t border-border-soft">
           <input
             value={input} onChange={e => setInput(e.target.value)}
             placeholder="Ask about workouts, nutrition, equipment…"
-            className="flex-1 bg-bg border border-accent/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+            className="inp flex-1"
           />
-          <button type="submit" disabled={sending || !input.trim()}
-            className="bg-primary hover:bg-primary/80 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm transition">
+          <button type="submit" disabled={sending || !input.trim()} className="btn-primary shrink-0 px-4">
             Send
           </button>
         </form>

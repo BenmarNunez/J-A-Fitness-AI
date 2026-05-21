@@ -1,9 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
-  background-color: #0F0F0E;
-  color: #FAF9F5;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #09120A;
+  color: #F1FFF4;
+  font-family: 'Outfit', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: #09120A; }
+::-webkit-scrollbar-thumb  { background: #003D1A; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #00E676; }
+
+/* ── Background ambient glow ─────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 0% 0%,   rgba(0,230,118,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 100% 100%, rgba(0,200,100,0.04) 0%, transparent 60%);
+}
+
+/* ── Card component ──────────────────────────────────── */
+@layer components {
+  .card {
+    @apply bg-surface border border-border-soft rounded-xl
+           transition-all duration-300;
+  }
+  .card:hover {
+    border-color: rgba(0, 230, 118, 0.25);
+    box-shadow: 0 0 20px rgba(0, 230, 118, 0.08);
+    transform: translateY(-1px);
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply bg-primary text-bg font-semibold px-5 py-2.5 rounded-lg
+           transition-all duration-200 text-sm;
+  }
+  .btn-primary:hover  { @apply bg-primary-dim shadow-glow-sm; }
+  .btn-primary:disabled { @apply opacity-40 cursor-not-allowed; }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply border border-border-mid text-primary font-medium px-5 py-2.5 rounded-lg
+           transition-all duration-200 text-sm;
+  }
+  .btn-ghost:hover { @apply bg-primary/5 shadow-glow-sm; }
+
+  /* Input */
+  .inp {
+    @apply w-full bg-bg border border-border-soft rounded-lg px-3 py-2.5
+           text-text-base text-sm placeholder-text-dim
+           focus:outline-none focus:border-primary/50 transition-colors duration-200;
+  }
+
+  /* Section heading */
+  .page-title {
+    @apply font-display text-4xl tracking-wide text-text-base uppercase;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply card p-5 flex flex-col gap-2;
+  }
+  .stat-label { @apply text-text-muted text-xs uppercase tracking-widest font-medium; }
+  .stat-value { @apply text-text-base font-semibold text-lg capitalize; }
+
+  /* Badge */
+  .badge-active  { @apply text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium; }
+  .badge-pending { @apply text-xs px-2.5 py-0.5 rounded-full bg-danger/10 text-danger font-medium; }
+
+  /* Day pill in fitness plan */
+  .day-pill {
+    @apply inline-block text-xs font-semibold uppercase tracking-widest
+           text-primary border border-primary/30 rounded-full px-3 py-0.5;
+  }
+
+  /* Disclaimer banner */
+  .disclaimer {
+    @apply flex items-start gap-3 bg-warn/5 border border-warn/20 rounded-xl
+           px-4 py-3 mb-5 text-warn text-xs;
+  }
+}
+
+/* ── Page fade-in ────────────────────────────────────── */
+.page-enter {
+  animation: fade-up 0.35s ease both;
+}
+
+/* ── Chat bubbles ────────────────────────────────────── */
+.bubble-user {
+  background: linear-gradient(135deg, #00E676, #00C853);
+  color: #09120A;
+  border-radius: 18px 18px 4px 18px;
+}
+.bubble-ai {
+  background: #111C12;
+  border: 1px solid rgba(0,230,118,0.15);
+  border-radius: 18px 18px 18px 4px;
+}
+
+/* ── Shimmer loading ─────────────────────────────────── */
+.shimmer-line {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.09) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 6px;
+  height: 14px;
 }

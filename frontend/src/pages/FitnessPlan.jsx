@@ -4,6 +4,8 @@ import DisclaimerBanner from '../components/DisclaimerBanner'
 import useFitnessStore from '../store/fitnessStore'
 import api from '../api'
 
+const DAY_ORDER = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
+
 export default function FitnessPlan() {
   const { activePlan, setPlans } = useFitnessStore()
   const [generating, setGenerating] = useState(false)
@@ -26,66 +28,126 @@ export default function FitnessPlan() {
     }
   }
 
-  const schedule = activePlan?.weekly_schedule
+  // weekly_schedule DB field stores the full Gemini JSON.
+  // Actual days live at activePlan.weekly_schedule.weekly_schedule
+  const planContent = activePlan?.weekly_schedule || {}
+  const schedule    = planContent?.weekly_schedule || planContent
+
+  const sortedEntries = schedule
+    ? DAY_ORDER
+        .filter(d => schedule[d] !== undefined)
+        .map(d => [d, schedule[d]])
+    : []
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Fitness Plan</h1>
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          className="bg-primary hover:bg-primary/80 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm transition"
-        >
-          {generating ? 'Generating…' : activePlan ? 'Regenerate Plan' : 'Generate Plan'}
+      {/* Header */}
+      <div className="flex items-end justify-between mb-7">
+        <div>
+          <p className="text-text-muted text-xs uppercase tracking-widest mb-1">Personalized</p>
+          <h1 className="page-title">Fitness Plan</h1>
+        </div>
+        <button onClick={handleGenerate} disabled={generating} className="btn-primary">
+          {generating ? (
+            <span className="flex items-center gap-2"><span className="animate-pulse-soft">⚡</span> Generating…</span>
+          ) : activePlan ? 'Regenerate' : 'Generate Plan'}
         </button>
       </div>
 
       <DisclaimerBanner />
 
       {error && (
-        <div className="bg-danger/10 border border-danger/40 text-danger text-sm rounded-lg px-4 py-3 mb-4">{error}</div>
+        <div className="flex items-center gap-2 bg-danger/8 border border-danger/30 text-danger text-sm rounded-xl px-4 py-3 mb-5">
+          <span>⚠</span> {error}
+        </div>
       )}
 
       {generating && (
-        <div className="bg-surface border border-accent/20 rounded-xl p-8 text-center text-text-muted">
-          AI is creating your personalized plan…
+        <div className="card p-10 text-center">
+          <div className="text-4xl mb-4 animate-pulse-soft">🤖</div>
+          <p className="text-text-muted text-sm">AI is building your personalized plan…</p>
+          <div className="mt-4 space-y-2 max-w-48 mx-auto">
+            <div className="shimmer-line" />
+            <div className="shimmer-line w-3/4 mx-auto" />
+            <div className="shimmer-line w-1/2 mx-auto" />
+          </div>
         </div>
       )}
 
       {!generating && activePlan && schedule && (
-        <div className="space-y-4">
-          {Object.entries(schedule.weekly_schedule || schedule).map(([day, exercises]) => (
-            <div key={day} className="bg-surface border border-accent/20 rounded-xl p-5">
-              <h3 className="text-accent font-semibold capitalize mb-3">{day}</h3>
-              {exercises === 'rest' || exercises === 'Rest' ? (
-                <p className="text-text-muted text-sm">Rest day</p>
-              ) : Array.isArray(exercises) ? (
-                <div className="space-y-2">
-                  {exercises.map((ex, i) => (
-                    <div key={i} className="flex items-center gap-4 text-sm">
-                      <span className="text-white font-medium min-w-36">{ex.exercise || ex.name}</span>
-                      <span className="text-text-muted">{ex.sets} sets × {ex.reps} reps</span>
-                      {ex.rest_seconds && <span className="text-text-muted">{ex.rest_seconds}s rest</span>}
-                    </div>
-                  ))}
+        <div className="space-y-3">
+          {/* Plan meta */}
+          {(activePlan.goal || planContent.estimated_weekly_calories_burned) && (
+            <div className="card p-4 flex flex-wrap gap-4 items-center mb-5">
+              {activePlan.goal && (
+                <div>
+                  <p className="stat-label">Goal</p>
+                  <p className="text-text-base text-sm font-medium capitalize">{activePlan.goal.replace(/_/g, ' ')}</p>
                 </div>
-              ) : (
-                <p className="text-text-muted text-sm">{String(exercises)}</p>
+              )}
+              {planContent.estimated_weekly_calories_burned > 0 && (
+                <div>
+                  <p className="stat-label">Est. Weekly Burn</p>
+                  <p className="text-primary text-sm font-semibold">{planContent.estimated_weekly_calories_burned} kcal</p>
+                </div>
               )}
             </div>
-          ))}
-          {schedule.notes && (
-            <div className="bg-surface border border-accent/20 rounded-xl p-4 text-text-muted text-sm">
-              {schedule.notes}
+          )}
+
+          {sortedEntries.map(([day, exercises]) => {
+            const isRest = exercises === 'rest' || exercises === 'Rest' ||
+              (typeof exercises === 'string') ||
+              (Array.isArray(exercises) && exercises.length === 0)
+            return (
+              <div key={day} className={`card p-5 ${isRest ? 'opacity-60' : ''}`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="day-pill">{day}</span>
+                  {isRest && <span className="text-text-dim text-xs">Recovery</span>}
+                  {!isRest && Array.isArray(exercises) && (
+                    <span className="text-text-dim text-xs">{exercises.length} exercises</span>
+                  )}
+                </div>
+                {isRest ? (
+                  <p className="text-text-dim text-sm flex items-center gap-2">
+                    <span>🌙</span> Rest & recover
+                  </p>
+                ) : Array.isArray(exercises) ? (
+                  <div className="divide-y divide-border-soft">
+                    {exercises.map((ex, i) => (
+                      <div key={i} className="flex items-center gap-4 py-2.5 first:pt-0 last:pb-0">
+                        <span className="text-text-dim text-xs w-5 shrink-0 font-mono">{String(i+1).padStart(2,'0')}</span>
+                        <span className="text-text-base text-sm font-medium flex-1">{ex.exercise || ex.name}</span>
+                        <span className="text-primary text-xs font-medium shrink-0">{ex.sets}×{ex.reps}</span>
+                        {ex.rest_seconds && (
+                          <span className="text-text-dim text-xs shrink-0">{ex.rest_seconds}s</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-text-muted text-sm">{String(exercises)}</p>
+                )}
+              </div>
+            )
+          })}
+
+          {planContent.notes && (
+            <div className="card p-5 border-border-mid">
+              <p className="stat-label mb-2">Coach Notes</p>
+              <p className="text-text-muted text-sm leading-relaxed">{planContent.notes}</p>
             </div>
           )}
         </div>
       )}
 
       {!generating && !activePlan && (
-        <div className="bg-surface border border-accent/20 rounded-xl p-8 text-center text-text-muted">
-          No plan generated yet. Complete your profile, then click Generate Plan.
+        <div className="card p-12 text-center">
+          <div className="text-5xl mb-4 opacity-40">🏋️</div>
+          <p className="text-text-base font-semibold mb-1">No Plan Yet</p>
+          <p className="text-text-muted text-sm">Complete your profile, then hit Generate Plan.</p>
+          <button onClick={handleGenerate} className="btn-primary mt-6">
+            Generate My Plan
+          </button>
         </div>
       )}
     </AppLayout>
