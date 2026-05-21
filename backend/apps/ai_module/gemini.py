@@ -5,7 +5,7 @@ from google.genai import types
 from django.conf import settings
 
 _client = genai.Client(api_key=settings.GEMINI_API_KEY)
-_MODEL = 'gemini-2.0-flash'
+_MODEL = 'gemini-2.5-flash'
 
 _FITNESS_PROMPT = """
 You are a certified personal trainer. Generate a personalized weekly workout plan in JSON format only.
