@@ -33,9 +33,15 @@ class MemberProfile(models.Model):
         ('female', 'Female'),
         ('other', 'Other'),
     ]
+    BODY_BUILDS = [
+        ('light',  'Light'),
+        ('medium', 'Medium'),
+        ('heavy',  'Heavy'),
+    ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     age = models.PositiveIntegerField(null=True, blank=True)
+    body_build = models.CharField(max_length=10, choices=BODY_BUILDS, blank=True)
     weight_kg = models.FloatField(null=True, blank=True)
     height_cm = models.FloatField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=GENDERS, blank=True)

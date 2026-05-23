@@ -4,7 +4,7 @@ from .models import MemberProfile
 
 User = get_user_model()
 
-PROFILE_FIELDS = ['age', 'weight_kg', 'height_cm', 'gender', 'fitness_goal', 'activity_level']
+PROFILE_FIELDS = ['age', 'weight_kg', 'height_cm', 'gender', 'fitness_goal', 'activity_level', 'body_build']
 
 
 class MemberProfileSerializer(serializers.ModelSerializer):
@@ -12,7 +12,7 @@ class MemberProfileSerializer(serializers.ModelSerializer):
         model = MemberProfile
         fields = [
             'age', 'weight_kg', 'height_cm', 'gender',
-            'fitness_goal', 'activity_level', 'bmi', 'bmr',
+            'fitness_goal', 'activity_level', 'body_build', 'bmi', 'bmr',
             'membership_status', 'membership_start', 'membership_end',
         ]
         read_only_fields = ['bmi', 'bmr', 'membership_status', 'membership_start', 'membership_end']

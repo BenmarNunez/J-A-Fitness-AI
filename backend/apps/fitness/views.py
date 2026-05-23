@@ -26,6 +26,7 @@ class GenerateFitnessPlanView(APIView):
             activity_level=profile.activity_level or 'moderate',
             bmr=profile.bmr or 0,
             bmi=profile.bmi or 0,
+            body_build=profile.body_build or 'medium',
         )
         if not plan_data:
             return Response(

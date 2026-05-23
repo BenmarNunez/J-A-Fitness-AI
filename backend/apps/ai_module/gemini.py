@@ -20,6 +20,10 @@ User profile:
 - Activity level: {activity_level}
 - BMI: {bmi}
 - BMR: {bmr} kcal/day
+- Body build (camera scan): {body_build}
+  * Light build → emphasize compound lifts, progressive overload, slightly higher volume to build mass
+  * Medium build → balanced strength + conditioning program
+  * Heavy build → prioritize fat-burning cardio intervals, bodyweight/moderate weights, full-body circuits
 
 SAFETY RULES:
 - For heavy compound lifts (bench press, squat, deadlift, overhead press), set needs_spotter to true.
@@ -65,6 +69,10 @@ User profile:
 - Activity level: {activity_level}
 - BMI: {bmi}
 - BMR: {bmr} kcal/day
+- Body build (camera scan): {body_build}
+  * Light build → higher protein, slight caloric surplus, 5-6 smaller meals
+  * Medium build → balanced macros, 3 main meals + 2 snacks
+  * Heavy build → caloric deficit, high protein, low simple carbs, more vegetables
 
 Use authentic Filipino foods such as: kanin (steamed rice), bangus (milkfish), tilapia, tinola, sinigang, adobo (chicken/pork), monggo soup, ensaladang talong, ampalaya, kamote, taho, pandesal, lugaw, champorado, pinakbet, paksiw, grilled liempo, itlog (egg), tokwa (tofu), pechay, kangkong, sayote, ube, calamansi juice, buko (coconut water), etc.
 
@@ -100,19 +108,21 @@ def _parse_json_response(text: str):
         return None
 
 
-def generate_fitness_plan(*, age, weight_kg, height_cm, gender, fitness_goal, activity_level, bmr, bmi):
+def generate_fitness_plan(*, age, weight_kg, height_cm, gender, fitness_goal, activity_level, bmr, bmi, body_build='medium'):
     prompt = _FITNESS_PROMPT.format(
         age=age, weight_kg=weight_kg, height_cm=height_cm, gender=gender,
         fitness_goal=fitness_goal, activity_level=activity_level, bmr=bmr, bmi=bmi,
+        body_build=body_build or 'medium',
     )
     response = _client.models.generate_content(model=_MODEL, contents=prompt)
     return _parse_json_response(response.text)
 
 
-def generate_nutrition_plan(*, age, weight_kg, height_cm, gender, fitness_goal, activity_level, bmr, bmi):
+def generate_nutrition_plan(*, age, weight_kg, height_cm, gender, fitness_goal, activity_level, bmr, bmi, body_build='medium'):
     prompt = _NUTRITION_PROMPT.format(
         age=age, weight_kg=weight_kg, height_cm=height_cm, gender=gender,
         fitness_goal=fitness_goal, activity_level=activity_level, bmr=bmr, bmi=bmi,
+        body_build=body_build or 'medium',
     )
     response = _client.models.generate_content(model=_MODEL, contents=prompt)
     return _parse_json_response(response.text)

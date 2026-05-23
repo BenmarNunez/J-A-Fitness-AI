@@ -22,6 +22,7 @@ class GenerateNutritionView(APIView):
             gender=profile.gender, fitness_goal=profile.fitness_goal or 'maintain',
             activity_level=profile.activity_level or 'moderate',
             bmr=profile.bmr or 0, bmi=profile.bmi or 0,
+            body_build=profile.body_build or 'medium',
         )
         if not plan_data:
             return Response({'detail': 'AI nutrition plan generation failed. Try again.'}, status=status.HTTP_400_BAD_REQUEST)
