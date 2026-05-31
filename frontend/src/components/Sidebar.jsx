@@ -6,7 +6,7 @@ const NAV = [
   { to: '/dashboard',    label: 'Dashboard',     icon: IconHome },
   { to: '/fitness-plan', label: 'Fitness Plan',  icon: IconDumbbell },
   { to: '/nutrition',    label: 'Nutrition',     icon: IconLeaf },
-  { to: '/posture',      label: 'Posture Check', icon: IconPerson },
+  { to: '/posture-check', label: 'Posture Check', icon: IconPerson },
   { to: '/body-scan',    label: 'Body Scan',     icon: IconScan },
   { to: '/bmi',          label: 'BMI',           icon: IconScale },
   { to: '/chatbot',      label: 'AI Chat',       icon: IconChat },
