@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import FitnessPlan, WorkoutLog, WorkoutSet, BodyMetric
+from .models import FitnessPlan, WorkoutLog, WorkoutSet, BodyMetric, RestDay
 
 
 class WorkoutSetSerializer(serializers.ModelSerializer):
@@ -35,3 +35,10 @@ class BodyMetricSerializer(serializers.ModelSerializer):
         model = BodyMetric
         fields = ['id', 'date', 'weight_kg', 'body_fat_pct', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class RestDaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RestDay
+        fields = ['id', 'user', 'date', 'reason', 'created_at']
+        read_only_fields = ['id', 'user', 'date', 'created_at']

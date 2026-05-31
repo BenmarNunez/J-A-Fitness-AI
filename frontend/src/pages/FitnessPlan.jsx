@@ -114,6 +114,28 @@ export default function FitnessPlan() {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
   const [expandedEx, setExpandedEx] = useState(null)
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [restDayModalOpen, setRestDayModalOpen] = useState(false)
+  const [restDayReason, setRestDayReason] = useState('')
+  const [restDayLoading, setRestDayLoading] = useState(false)
+  const [restDaySuccess, setRestDaySuccess] = useState(false)
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const formattedDate = currentTime.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+  const formattedTime = currentTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  })
 
   const bodyBuild = user?.profile?.body_build
   const buildMeta = BUILD_META[bodyBuild]
@@ -132,6 +154,21 @@ export default function FitnessPlan() {
     } finally { setGenerating(false) }
   }
 
+  const handleRequestRestDay = async () => {
+    if (!restDayReason.trim()) return
+    setRestDayLoading(true); setError('')
+    try {
+      const { data } = await api.post('/api/fitness/rest-day/', { reason: restDayReason })
+      setPlans([data.plan])
+      setRestDaySuccess(true)
+      setRestDayModalOpen(false)
+      setRestDayReason('')
+      setTimeout(() => setRestDaySuccess(false), 5000)
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to request rest day.')
+    } finally { setRestDayLoading(false) }
+  }
+
   const planContent = activePlan?.weekly_schedule || {}
   const schedule    = planContent?.weekly_schedule || planContent
   const sortedEntries = schedule
@@ -141,14 +178,24 @@ export default function FitnessPlan() {
   return (
     <AppLayout>
       <div className="flex items-end justify-between mb-7">
-        <div>
-          <p className="text-text-muted text-xs uppercase tracking-widest mb-1">Personalized</p>
-          <h1 className="page-title">Fitness Plan</h1>
+        <div className="flex flex-col gap-1">
+          <div className="text-text-muted text-[11px] font-medium uppercase tracking-wider">
+            {formattedDate} | {formattedTime}
+          </div>
+          <div className="flex items-baseline gap-2">
+            <p className="text-text-muted text-xs uppercase tracking-widest mb-1">Personalized</p>
+            <h1 className="page-title !mb-0">Fitness Plan</h1>
+          </div>
         </div>
-        <button onClick={handleGenerate} disabled={generating} className="btn-primary">
-          {generating ? <span className="flex items-center gap-2"><span className="animate-pulse-soft">⚡</span>Generating…</span>
-            : activePlan ? 'Regenerate' : 'Generate Plan'}
-        </button>
+        <div className="flex gap-3">
+          <button onClick={() => setRestDayModalOpen(true)} disabled={generating || restDayLoading} className="btn-secondary text-xs py-1 px-3">
+            Request Rest Day
+          </button>
+          <button onClick={handleGenerate} disabled={generating || restDayLoading} className="btn-primary">
+            {generating ? <span className="flex items-center gap-2"><span className="animate-pulse-soft">⚡</span>Generating…</span>
+              : activePlan ? 'Regenerate' : 'Generate Plan'}
+          </button>
+        </div>
       </div>
 
       <DisclaimerBanner />
@@ -338,6 +385,37 @@ export default function FitnessPlan() {
           <p className="text-text-base font-semibold mb-1">No Plan Yet</p>
           <p className="text-text-muted text-sm">Complete your profile, then hit Generate Plan.</p>
           <button onClick={handleGenerate} className="btn-primary mt-6">Generate My Plan</button>
+        </div>
+      )}
+
+      {restDaySuccess && (
+        <div className="fixed bottom-6 right-6 bg-success text-white px-4 py-3 rounded-xl shadow-lg animate-fade-up z-50 border border-success/20">
+          <p className="text-sm font-medium">🌙 Rest day logged. Your plan has been updated.</p>
+        </div>
+      )}
+
+      {restDayModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-md overflow-hidden animate-fade-up">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-2">Request Rest Day</h3>
+              <p className="text-text-muted text-sm mb-4">Tell us why you need a rest day, and we'll adjust your plan for tomorrow.</p>
+              <textarea
+                className="w-full bg-surface border border-border-soft rounded-xl p-3 text-sm text-text-base focus:border-primary outline-none transition-all min-h-[100px]"
+                placeholder="e.g. Feeling fatigued, muscle soreness, family emergency..."
+                value={restDayReason}
+                onChange={(e) => setRestDayReason(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-3 p-4 bg-surface border-t border-border-soft">
+              <button onClick={() => setRestDayModalOpen(false)} disabled={restDayLoading} className="flex-1 py-2 text-sm font-medium text-text-muted hover:text-text-base transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleRequestRestDay} disabled={restDayLoading || !restDayReason.trim()} className="btn-primary flex-1 py-2 text-sm font-medium">
+                {restDayLoading ? 'Updating Plan...' : 'Confirm Rest Day'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </AppLayout>

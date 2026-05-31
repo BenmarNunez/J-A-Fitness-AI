@@ -128,6 +128,19 @@ def generate_nutrition_plan(*, age, weight_kg, height_cm, gender, fitness_goal, 
     return _parse_json_response(response.text)
 
 
+def generate_rest_day_plan(*, age, weight_kg, height_cm, gender, fitness_goal, activity_level, bmr, bmi, body_build='medium', reason='General recovery'):
+    prompt = _FITNESS_PROMPT.format(
+        age=age, weight_kg=weight_kg, height_cm=height_cm, gender=gender,
+        fitness_goal=fitness_goal, activity_level=activity_level, bmr=bmr, bmi=bmi,
+        body_build=body_build or 'medium',
+    )
+    rest_day_context = f"\n\nIMPORTANT: The user requested a rest day today due to: {reason}. Generate a modified exercise plan that resumes tomorrow with lighter intensity or active recovery exercises."
+    prompt += rest_day_context
+
+    response = _client.models.generate_content(model=_MODEL, contents=prompt)
+    return _parse_json_response(response.text)
+
+
 def analyze_food_image(image_bytes: bytes, mime_type: str = 'image/jpeg'):
     prompt = """Analyze this food image and return ONLY valid JSON. Focus on Filipino foods if present.
 {

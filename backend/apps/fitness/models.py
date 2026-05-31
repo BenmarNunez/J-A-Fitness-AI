@@ -40,3 +40,13 @@ class BodyMetric(models.Model):
 
     class Meta:
         ordering = ['-date']
+
+
+class RestDay(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rest_days')
+    date = models.DateField(auto_now_add=True)
+    reason = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date']

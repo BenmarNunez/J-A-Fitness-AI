@@ -2,9 +2,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.users.permissions import IsActiveMember
-from apps.ai_module.gemini import generate_fitness_plan
-from .models import FitnessPlan, WorkoutLog, BodyMetric
-from .serializers import FitnessPlanSerializer, WorkoutLogSerializer, BodyMetricSerializer
+from apps.ai_module.gemini import generate_fitness_plan, generate_rest_day_plan
+from .models import FitnessPlan, WorkoutLog, BodyMetric, RestDay
+from .serializers import FitnessPlanSerializer, WorkoutLogSerializer, BodyMetricSerializer, RestDaySerializer
 
 
 class GenerateFitnessPlanView(APIView):
@@ -100,3 +100,51 @@ class BMIView(APIView):
         else:
             classification = 'Obese'
         return Response({'bmi': bmi, 'classification': classification})
+
+
+class RestDayView(APIView):
+    permission_classes = [IsActiveMember]
+
+    def post(self, request):
+        reason = request.data.get('reason')
+        if not reason:
+            return Response({'detail': 'Reason is required for logging a rest day.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Log the rest day
+        rest_day = RestDay.objects.create(user=request.user, reason=reason)
+        serializer = RestDaySerializer(rest_day)
+
+        # Regenerate plan with Gemini
+        profile = request.user.profile
+        plan_data = generate_rest_day_plan(
+            age=profile.age,
+            weight_kg=profile.weight_kg,
+            height_cm=profile.height_cm,
+            gender=profile.gender,
+            fitness_goal=profile.fitness_goal or 'maintain',
+            activity_level=profile.activity_level or 'moderate',
+            bmr=profile.bmr or 0,
+            bmi=profile.bmi or 0,
+            body_build=profile.body_build or 'medium',
+            reason=reason,
+        )
+
+        if not plan_data:
+            return Response({
+                'rest_day': serializer.data,
+                'detail': 'Rest day logged, but AI plan regeneration failed.'
+            }, status=status.HTTP_200_OK)
+
+        # Update active plan
+        FitnessPlan.objects.filter(user=request.user, is_active=True).update(is_active=False)
+        plan = FitnessPlan.objects.create(
+            user=request.user,
+            goal=plan_data.get('goal', profile.fitness_goal or 'maintain'),
+            weekly_schedule=plan_data,
+            is_active=True,
+        )
+
+        return Response({
+            'rest_day': serializer.data,
+            'plan': FitnessPlanSerializer(plan).data
+        }, status=status.HTTP_201_CREATED)
