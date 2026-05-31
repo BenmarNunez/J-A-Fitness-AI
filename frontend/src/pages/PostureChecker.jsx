@@ -57,6 +57,15 @@ export default function PostureChecker() {
   const [dimensions, setDimensions]      = useState({ width: 640, height: 480 })
 
   useEffect(() => {
+    if (exerciseData) {
+      const key = mapToPostureKey(exerciseData.name)
+      setSelectedExercise(key)
+      setPlanExSelected(exerciseData.name)
+      resetReps()
+    }
+  }, [exerciseData])
+
+  useEffect(() => {
     const handleResize = () => {
       const isMobile = window.innerWidth <= 768;
       const width = isMobile ? window.innerWidth : 640;
@@ -233,6 +242,15 @@ export default function PostureChecker() {
 
   return (
     <AppLayout>
+      <div className="flex justify-start mb-4">
+        <button
+          onClick={() => navigate('/fitness-plan')}
+          className="text-text-muted hover:text-primary text-xs font-medium transition-colors flex items-center gap-1"
+        >
+          ← Back to Fitness Plan
+        </button>
+      </div>
+
       <div className="mb-5">
         <p className="text-text-muted text-xs uppercase tracking-widest mb-1">AI-Powered CV</p>
         <h1 className="page-title">Posture Check</h1>
@@ -248,57 +266,81 @@ export default function PostureChecker() {
       </div>
 
       {/* #9 — All Plan Exercises dropdown */}
-      {planExercises.length > 0 && (
-        <div className="card p-4 mb-4">
-          <p className="stat-label mb-3">From Your Fitness Plan</p>
-          <div className="flex flex-wrap gap-2">
-            {planExercises.map(ex => (
-              <button key={ex.name}
-                onClick={() => handleSelectPlanEx(ex)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                  planExSelected === ex.name
-                    ? 'bg-primary text-bg border-primary shadow-glow-sm'
-                    : 'bg-surface border-border-soft text-text-muted hover:text-text-base hover:border-border-mid'
-                }`}>
-                {ex.name}
-              </button>
-            ))}
+      {exerciseData ? (
+        <div className="card p-4 mb-4 border-primary/30 bg-primary/5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-primary text-lg">🎯</span>
+            <p className="stat-label">Target Exercise</p>
           </div>
+          <h2 className="text-xl font-bold mb-4 text-text-base">{exerciseData.name}</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-text-muted text-[10px] uppercase tracking-wider">Sets</p>
+              <p className="text-text-base font-semibold">{exerciseData.recommended_sets || '--'}</p>
+            </div>
+            <div>
+              <p className="text-text-muted text-[10px] uppercase tracking-wider">Reps</p>
+              <p className="text-text-base font-semibold">{exerciseData.recommended_reps || '--'}</p>
+            </div>
+            <div>
+              <p className="text-text-muted text-[10px] uppercase tracking-wider">Weight</p>
+              <p className="text-warn font-semibold">{exerciseData.suggested_weight_kg || '0'} kg</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {planExercises.length > 0 && (
+            <div className="card p-4 mb-4">
+              <p className="stat-label mb-3">From Your Fitness Plan</p>
+              <div className="flex flex-wrap gap-2">
+                {planExercises.map(ex => (
+                  <button key={ex.name}
+                    onClick={() => handleSelectPlanEx(ex)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                      planExSelected === ex.name
+                        ? 'bg-primary text-bg border-primary shadow-glow-sm'
+                        : 'bg-surface border-border-soft text-text-muted hover:text-text-base hover:border-border-mid'
+                    }`}>
+                    {ex.name}
+                  </button>
+                ))}
+              </div>
 
-          {/* Show selected plan exercise details */}
-          {selectedPlanEx && (
-            <div className="mt-3 pt-3 border-t border-border-soft grid grid-cols-2 md:grid-cols-4 gap-3">
-              {selectedPlanEx.sets && <div><p className="stat-label">Sets</p><p className="text-text-base font-semibold">{selectedPlanEx.sets}</p></div>}
-              {selectedPlanEx.reps && <div><p className="stat-label">Reps</p><p className="text-text-base font-semibold">{selectedPlanEx.reps}</p></div>}
-              {selectedPlanEx.weight > 0 && <div><p className="stat-label">Weight</p><p className="text-warn font-semibold">{selectedPlanEx.weight} kg</p></div>}
-              {selectedPlanEx.key && <div><p className="stat-label">CV Tracking</p><p className="text-primary text-xs font-medium capitalize">{selectedPlanEx.key.replace(/_/g,' ')} pattern</p></div>}
-              {selectedPlanEx.instructions && (
-                <div className="col-span-2 md:col-span-4">
-                  <p className="stat-label">Form Cue</p>
-                  <p className="text-text-muted text-xs leading-relaxed">{selectedPlanEx.instructions}</p>
+              {selectedPlanEx && (
+                <div className="mt-3 pt-3 border-t border-border-soft grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {selectedPlanEx.sets && <div><p className="stat-label">Sets</p><p className="text-text-base font-semibold">{selectedPlanEx.sets}</p></div>}
+                  {selectedPlanEx.reps && <div><p className="stat-label">Reps</p><p className="text-text-base font-semibold">{selectedPlanEx.reps}</p></div>}
+                  {selectedPlanEx.weight > 0 && <div><p className="stat-label">Weight</p><p className="text-warn font-semibold">{selectedPlanEx.weight} kg</p></div>}
+                  {selectedPlanEx.key && <div><p className="stat-label">CV Tracking</p><p className="text-primary text-xs font-medium capitalize">{selectedPlanEx.key.replace(/_/g,' ')} pattern</p></div>}
+                  {selectedPlanEx.instructions && (
+                    <div className="col-span-2 md:col-span-4">
+                      <p className="stat-label">Form Cue</p>
+                      <p className="text-text-muted text-xs leading-relaxed">{selectedPlanEx.instructions}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Base exercises */}
-      <div className="mb-4">
-        <p className="text-text-dim text-xs uppercase tracking-widest mb-2">Base Exercises</p>
-        <div className="flex flex-wrap gap-2">
-          {EXERCISE_KEYS.map(key => (
-            <button key={key} onClick={() => handleSelectBaseEx(key)}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${
-                selectedExercise === key && !planExSelected
-                  ? 'bg-primary text-bg border-primary font-semibold shadow-glow-sm'
-                  : 'bg-surface border-border-soft text-text-muted hover:text-text-base'
-              }`}>
-              {EXERCISES[key].label}
-            </button>
-          ))}
-        </div>
-      </div>
+          <div className="mb-4">
+            <p className="text-text-dim text-xs uppercase tracking-widest mb-2">Base Exercises</p>
+            <div className="flex flex-wrap gap-2">
+              {EXERCISE_KEYS.map(key => (
+                <button key={key} onClick={() => handleSelectBaseEx(key)}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${
+                    selectedExercise === key && !planExSelected
+                      ? 'bg-primary text-bg border-primary font-semibold shadow-glow-sm'
+                      : 'bg-surface border-border-soft text-text-muted hover:text-text-base'
+                  }`}>
+                  {EXERCISES[key].label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Manual Rep Controls */}
       {!isAutoMode && (
