@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import DisclaimerBanner from '../components/DisclaimerBanner'
 import useFitnessStore from '../store/fitnessStore'
@@ -24,6 +24,7 @@ function mapToPostureKey(name) {
 export default function PostureChecker() {
   const { activePlan, postureExercise, setPostureExercise } = useFitnessStore()
   const location = useLocation()
+  const navigate = useNavigate()
   const exerciseData = location.state?.exercise
 
   const [currentSet, setCurrentSet] = useState(1)
@@ -40,6 +41,7 @@ export default function PostureChecker() {
   const landmarkerRef   = useRef(null)
   const drawingUtilsRef = useRef(null)
   const animFrameRef    = useRef(null)
+  const poseConnectionsRef = useRef(null)
   const repStateRef     = useRef({ count: 0, phase: 'extended' })
 
   const [selectedExercise, setSelectedExercise] = useState('squat') // CV key
@@ -51,21 +53,23 @@ export default function PostureChecker() {
   const [formStatus, setFormStatus]      = useState('idle')
   const [feedback, setFeedback]          = useState('')
   const [injuryAlert, setInjuryAlert]    = useState('')
+  const [aspectRatio, setAspectRatio]      = useState(4/3)
   const [dimensions, setDimensions]      = useState({ width: 640, height: 480 })
 
   useEffect(() => {
     const handleResize = () => {
       const isMobile = window.innerWidth <= 768;
+      const width = isMobile ? window.innerWidth : 640;
       setDimensions({
-        width: isMobile ? window.innerWidth : 640,
-        height: 480
+        width: width,
+        height: width / aspectRatio
       });
     };
 
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [aspectRatio])
 
   // #9 — All unique exercises from entire plan (all days)
   const planExercises = useMemo(() => {
@@ -87,6 +91,22 @@ export default function PostureChecker() {
 
   const selectedPlanEx = planExercises.find(e => e.name === planExSelected) || null
 
+  useEffect(() => {
+    const targetReps = exerciseData?.recommended_reps || selectedPlanEx?.reps;
+    const targetSets = exerciseData?.recommended_sets || selectedPlanEx?.sets;
+
+    if (targetReps && repCount >= targetReps) {
+      if (currentSet < targetSets) {
+        alert("Set Complete! 🎉");
+        setRepCount(0);
+        setCurrentSet(prev => prev + 1);
+        repStateRef.current = { count: 0, phase: 'extended', holdFrames: 0 };
+      } else {
+        setWorkoutComplete(true);
+      }
+    }
+  }, [repCount, exerciseData, selectedPlanEx, currentSet]);
+
   // #6 — Auto-select from chatbot sync
   useEffect(() => {
     if (postureExercise && EXERCISES[postureExercise]) {
@@ -102,6 +122,7 @@ export default function PostureChecker() {
       try {
         const vision = await import('@mediapipe/tasks-vision')
         const { PoseLandmarker, FilesetResolver, DrawingUtils } = vision
+        poseConnectionsRef.current = PoseLandmarker.POSE_CONNECTIONS
         const filesetResolver = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM)
         const poseLandmarker  = await PoseLandmarker.createFromOptions(filesetResolver, {
           baseOptions: { modelAssetPath: POSE_MODEL, delegate: 'GPU' },
@@ -125,7 +146,13 @@ export default function PostureChecker() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
       videoRef.current.srcObject = stream
       await new Promise(resolve => { videoRef.current.onloadedmetadata = resolve })
-      videoRef.current.play()
+      const video = videoRef.current
+      if (canvasRef.current) {
+        canvasRef.current.width = video.videoWidth
+        canvasRef.current.height = video.videoHeight
+      }
+      setAspectRatio(video.videoWidth / video.videoHeight)
+      video.play()
       const { DrawingUtils } = await import('@mediapipe/tasks-vision')
       drawingUtilsRef.current = new DrawingUtils(canvasRef.current.getContext('2d'))
       setCameraActive(true)
@@ -163,15 +190,13 @@ export default function PostureChecker() {
       if (!video || !canvas || video.readyState < 2 || !landmarkerRef.current) {
         animFrameRef.current = requestAnimationFrame(detect); return
       }
-      canvas.width = video.videoWidth; canvas.height = video.videoHeight
       const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height)
       const result = landmarkerRef.current.detectForVideo(video, performance.now())
 
       if (result.landmarks.length > 0) {
         const landmarks = result.landmarks[0]
-        const { PoseLandmarker } = await import('@mediapipe/tasks-vision')
         if (drawingUtilsRef.current) {
-          drawingUtilsRef.current.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#00E676', lineWidth: 2 })
+          drawingUtilsRef.current.drawConnectors(landmarks, poseConnectionsRef.current, { color: '#00E676', lineWidth: 2 })
           drawingUtilsRef.current.drawLandmarks(landmarks, { color: '#00C853', lineWidth: 1, radius: 3 })
         }
         const angles = extractAngles(landmarks)
@@ -295,9 +320,26 @@ export default function PostureChecker() {
 
         {cameraActive && (
           <div className="absolute top-3 right-3 bg-bg/80 border border-border-mid rounded-xl px-4 py-2 text-center shadow-glow-sm">
-            <p className="text-text-muted text-[10px] uppercase tracking-widest">REPS</p>
-            <p className="text-primary font-display text-4xl">{repCount}</p>
+            <p className="text-text-muted text-[10px] uppercase tracking-widest">PROGRESS</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-primary font-display text-2xl">Reps: {repCount} / {exerciseData?.recommended_reps || selectedPlanEx?.reps || '--'}</p>
+              <p className="text-primary font-display text-xl">Set: {currentSet} / {exerciseData?.recommended_sets || selectedPlanEx?.sets || '--'}</p>
+            </div>
             <p className="text-text-dim text-[10px] max-w-20 truncate">{displayName}</p>
+          </div>
+        )}
+
+        {workoutComplete && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-bg/90 backdrop-blur-sm rounded-xl p-6 text-center">
+            <div className="text-6xl mb-4">💪</div>
+            <h2 className="text-2xl font-bold mb-2">Workout Complete!</h2>
+            <p className="text-text-muted mb-6">Great job finishing your sets!</p>
+            <button
+              onClick={() => navigate('/fitness-plan')}
+              className="btn-primary"
+            >
+              Back to Fitness Plan
+            </button>
           </div>
         )}
       </div>
