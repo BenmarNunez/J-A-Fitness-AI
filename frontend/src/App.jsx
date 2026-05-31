@@ -15,10 +15,12 @@ import Logbook from './pages/Logbook'
 import Profile from './pages/Profile'
 import AdminDashboard from './pages/AdminDashboard'
 import BodyScanner from './pages/BodyScanner'
+import PWAInstallBanner from './components/PWAInstallBanner'
 
 export default function App() {
   return (
     <BrowserRouter>
+      <PWAInstallBanner />
       <Routes>
         {/* Public */}
         <Route path="/" element={<Landing />} />
