@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import PWAInstallButton from '../components/PWAInstallButton'
 
 export default function Landing() {
   return (
@@ -6,7 +7,8 @@ export default function Landing() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-accent/20">
         <span className="text-accent font-bold text-xl tracking-tight">J&A Fitness AI</span>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <PWAInstallButton />
           <Link
             to="/login"
             className="px-4 py-2 text-sm text-accent border border-accent/40 rounded-lg hover:bg-accent/10 transition"
