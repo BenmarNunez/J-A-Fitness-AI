@@ -51,6 +51,21 @@ export default function PostureChecker() {
   const [formStatus, setFormStatus]      = useState('idle')
   const [feedback, setFeedback]          = useState('')
   const [injuryAlert, setInjuryAlert]    = useState('')
+  const [dimensions, setDimensions]      = useState({ width: 640, height: 480 })
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobile = window.innerWidth <= 768;
+      setDimensions({
+        width: isMobile ? window.innerWidth : 640,
+        height: 480
+      });
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // #9 — All unique exercises from entire plan (all days)
   const planExercises = useMemo(() => {
@@ -259,8 +274,8 @@ export default function PostureChecker() {
       </div>
 
       {/* Camera viewport */}
-      <div className={`relative bg-surface border-2 rounded-xl overflow-hidden mb-4 transition-colors duration-500 ${STATUS_BORDER[formStatus]}`}
-        style={{ aspectRatio: '16/9', maxHeight: 480 }}>
+      <div className={`relative bg-surface border-2 rounded-xl overflow-hidden mb-4 transition-colors duration-500 mx-auto ${STATUS_BORDER[formStatus]}`}
+        style={{ width: dimensions.width, height: dimensions.height }}>
         <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
