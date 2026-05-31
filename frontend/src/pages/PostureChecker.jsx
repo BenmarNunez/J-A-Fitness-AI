@@ -209,8 +209,10 @@ export default function PostureChecker() {
             if (exercise.goodForm(angles)) { setFormStatus('good'); setFeedback(exercise.feedback.good) }
             else { setFormStatus('warning'); setFeedback(exercise.feedback.low) }
           }
-          repStateRef.current = updateRepCount(repStateRef.current, angles, selectedExercise)
-          setRepCount(repStateRef.current.count)
+          if (isAutoMode) {
+            repStateRef.current = updateRepCount(repStateRef.current, angles, selectedExercise)
+            setRepCount(repStateRef.current.count)
+          }
         }
       } else { setFormStatus('idle'); setFeedback('Stand in frame to begin analysis') }
 
@@ -297,6 +299,28 @@ export default function PostureChecker() {
           ))}
         </div>
       </div>
+
+      {/* Manual Rep Controls */}
+      {!isAutoMode && (
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <button
+            onClick={() => setRepCount(prev => Math.max(0, prev - 1))}
+            className="w-12 h-12 rounded-full bg-surface border border-border-soft text-2xl flex items-center justify-center hover:bg-border-mid transition"
+          >
+            -
+          </button>
+          <div className="text-center">
+            <p className="text-xs text-text-muted uppercase">Manual Reps</p>
+            <p className="text-3xl font-bold">{repCount}</p>
+          </div>
+          <button
+            onClick={() => setRepCount(prev => prev + 1)}
+            className="w-12 h-12 rounded-full bg-primary text-bg text-2xl flex items-center justify-center hover:bg-primary/80 transition"
+          >
+            +
+          </button>
+        </div>
+      )}
 
       {/* Camera viewport */}
       <div className={`relative bg-surface border-2 rounded-xl overflow-hidden mb-4 transition-colors duration-500 mx-auto ${STATUS_BORDER[formStatus]}`}
