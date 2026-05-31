@@ -14,6 +14,7 @@ import Chatbot from './pages/Chatbot'
 import Logbook from './pages/Logbook'
 import Profile from './pages/Profile'
 import AdminDashboard from './pages/AdminDashboard'
+import BodyScanner from './pages/BodyScanner'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/chatbot" element={<PrivateRoute><Chatbot /></PrivateRoute>} />
         <Route path="/logbook" element={<PrivateRoute><Logbook /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        <Route path="/body-scan" element={<PrivateRoute><BodyScanner /></PrivateRoute>} />
 
         {/* Admin-only */}
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

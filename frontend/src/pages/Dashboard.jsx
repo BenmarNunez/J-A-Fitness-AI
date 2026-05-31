@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import AppLayout from '../components/AppLayout'
 import useAuthStore from '../store/authStore'
 import useFitnessStore from '../store/fitnessStore'
 import api from '../api'
+
+const BUILD_META = {
+  light:  { icon: '🏃', label: 'Light Build',  color: 'text-admin-accent' },
+  medium: { icon: '💪', label: 'Medium Build', color: 'text-primary' },
+  heavy:  { icon: '🏋️', label: 'Heavy Build',  color: 'text-warn' },
+}
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
@@ -18,6 +25,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function Dashboard() {
   const { user } = useAuthStore()
   const { bodyMetrics, setBodyMetrics, addBodyMetric } = useFitnessStore()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -33,10 +41,11 @@ export default function Dashboard() {
 
   const profile = user?.profile
 
+  const buildMeta = BUILD_META[profile?.body_build]
   const stats = [
-    { label: 'BMI', value: profile?.bmi ?? '—', sub: 'Body Mass Index' },
-    { label: 'BMR', value: profile?.bmr ? `${profile.bmr}` : '—', sub: 'kcal / day' },
-    { label: 'Goal', value: profile?.fitness_goal?.replace(/_/g, ' ') ?? '—', sub: 'Current target' },
+    { label: 'BMI',   value: profile?.bmi ?? '—', sub: 'Body Mass Index' },
+    { label: 'BMR',   value: profile?.bmr ? `${profile.bmr}` : '—', sub: 'kcal / day' },
+    { label: 'Goal',  value: profile?.fitness_goal?.replace(/_/g, ' ') ?? '—', sub: 'Current target' },
     { label: 'Status', value: profile?.membership_status ?? '—', sub: 'Membership', isBadge: true },
   ]
 
@@ -55,7 +64,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {stats.map(({ label, value, sub, isBadge }) => (
           <div key={label} className="stat-card group">
             <span className="stat-label">{label}</span>
@@ -70,6 +79,35 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Body Build Card — #3 visible connection to panelist */}
+      {buildMeta ? (
+        <div className="card p-4 mb-6 flex items-center gap-4 border-border-mid">
+          <div className="w-12 h-12 rounded-xl bg-surface-2 flex items-center justify-center text-2xl shrink-0">
+            {buildMeta.icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="stat-label">Body Build (Camera Scan)</p>
+            <p className={`font-semibold text-lg ${buildMeta.color}`}>{buildMeta.label}</p>
+            <p className="text-text-dim text-xs">Your fitness & meal plans are tailored to this classification</p>
+          </div>
+          <button onClick={() => navigate('/body-scan')}
+            className="shrink-0 text-xs text-text-dim border border-border-soft rounded-lg px-3 py-1.5 hover:text-text-muted transition-colors">
+            Rescan
+          </button>
+        </div>
+      ) : (
+        <div className="card p-4 mb-6 flex items-center gap-4 border-warn/20 bg-warn/3 cursor-pointer hover:border-warn/40 transition-all"
+          onClick={() => navigate('/body-scan')}>
+          <div className="w-12 h-12 rounded-xl bg-warn/10 flex items-center justify-center text-xl shrink-0">📷</div>
+          <div className="flex-1">
+            <p className="stat-label">Body Build Not Scanned</p>
+            <p className="text-warn text-sm font-medium">Scan your body build to personalize your plans</p>
+            <p className="text-text-dim text-xs">Plans currently use default Medium build</p>
+          </div>
+          <span className="text-warn text-xs font-medium shrink-0">Scan Now →</span>
+        </div>
+      )}
 
       {/* Weight Chart */}
       <div className="card p-6 mb-5">

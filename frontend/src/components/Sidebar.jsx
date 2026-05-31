@@ -7,6 +7,7 @@ const NAV = [
   { to: '/fitness-plan', label: 'Fitness Plan',  icon: IconDumbbell },
   { to: '/nutrition',    label: 'Nutrition',     icon: IconLeaf },
   { to: '/posture',      label: 'Posture Check', icon: IconPerson },
+  { to: '/body-scan',    label: 'Body Scan',     icon: IconScan },
   { to: '/bmi',          label: 'BMI',           icon: IconScale },
   { to: '/chatbot',      label: 'AI Chat',       icon: IconChat },
   { to: '/logbook',      label: 'Logbook',       icon: IconBook },
@@ -122,4 +123,5 @@ function IconChat(p)     { return <Ico {...p}><path d="M21 15a2 2 0 0 1-2 2H7l-4
 function IconBook(p)     { return <Ico {...p}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></Ico> }
 function IconUser(p)     { return <Ico {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></Ico> }
 function IconShield(p)   { return <Ico {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></Ico> }
+function IconScan(p)     { return <Ico {...p}><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8M12 8v8"/></Ico> }
 function IconLogout(p)   { return <Ico {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Ico> }

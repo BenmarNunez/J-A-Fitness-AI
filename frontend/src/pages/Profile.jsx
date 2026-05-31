@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import useAuthStore from '../store/authStore'
 import api from '../api'
@@ -6,8 +7,12 @@ import api from '../api'
 const FITNESS_GOALS   = ['lose_weight', 'build_muscle', 'maintain']
 const ACTIVITY_LEVELS = ['sedentary', 'light', 'moderate', 'active', 'very_active']
 
+const BUILD_LABEL = { light: '🏃 Light Build', medium: '💪 Medium Build', heavy: '🏋️ Heavy Build' }
+const BUILD_COLOR = { light: 'text-admin-accent', medium: 'text-primary', heavy: 'text-warn' }
+
 export default function Profile() {
   const { user, setAuth, token } = useAuthStore()
+  const navigate = useNavigate()
   const profile = user?.profile
   const [form, setForm] = useState({
     age:            profile?.age ?? '',
@@ -60,21 +65,32 @@ export default function Profile() {
               </span>
             </div>
           </div>
-          {(profile?.bmi || profile?.bmr) && (
-            <div className="mt-5 pt-4 border-t border-border-soft grid grid-cols-2 gap-4">
-              {profile?.bmi && (
-                <div>
-                  <p className="stat-label">BMI</p>
-                  <p className="text-text-base font-semibold">{profile.bmi}</p>
-                </div>
-              )}
-              {profile?.bmr && (
-                <div>
-                  <p className="stat-label">BMR</p>
-                  <p className="text-text-base font-semibold">{profile.bmr} <span className="text-text-dim text-xs">kcal/day</span></p>
-                </div>
+          <div className="mt-5 pt-4 border-t border-border-soft grid grid-cols-2 md:grid-cols-3 gap-4">
+            {profile?.bmi && (
+              <div><p className="stat-label">BMI</p><p className="text-text-base font-semibold">{profile.bmi}</p></div>
+            )}
+            {profile?.bmr && (
+              <div><p className="stat-label">BMR</p><p className="text-text-base font-semibold">{profile.bmr} <span className="text-text-dim text-xs">kcal/day</span></p></div>
+            )}
+            <div>
+              <p className="stat-label">Body Build</p>
+              {profile?.body_build ? (
+                <p className={`font-semibold text-sm ${BUILD_COLOR[profile.body_build]}`}>
+                  {BUILD_LABEL[profile.body_build]}
+                </p>
+              ) : (
+                <button onClick={() => navigate('/body-scan')}
+                  className="text-xs text-primary border border-primary/30 rounded-full px-2.5 py-1 hover:bg-primary/10 transition-all mt-0.5">
+                  + Scan Now
+                </button>
               )}
             </div>
+          </div>
+          {profile?.body_build && (
+            <button onClick={() => navigate('/body-scan')}
+              className="mt-3 text-xs text-text-dim hover:text-text-muted transition-colors">
+              📷 Rescan body build
+            </button>
           )}
         </div>
 

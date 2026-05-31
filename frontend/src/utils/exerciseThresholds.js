@@ -70,7 +70,10 @@ export const EXERCISES = {
   },
 }
 
-// Returns updated { count, phase } state
+// Returns updated { count, phase, holdFrames } state
+// Requires HOLD_FRAMES consecutive frames in contracted/extended position before transitioning
+const HOLD_FRAMES = 4
+
 export function updateRepCount(state, angles, exercise) {
   const config = EXERCISES[exercise]
   if (!config || !angles) return state
@@ -78,14 +81,19 @@ export function updateRepCount(state, angles, exercise) {
   const angle = angles[config.repAngle]
   if (angle === undefined) return state
 
-  let { count, phase } = state
+  let { count, phase, holdFrames = 0 } = state
 
-  if (phase === 'extended' && angle < config.contractedBelow) {
-    phase = 'contracted'
-  } else if (phase === 'contracted' && angle > config.extendedAbove) {
-    phase = 'extended'
-    count += 1
+  if (phase === 'extended') {
+    if (angle < config.contractedBelow) {
+      holdFrames += 1
+      if (holdFrames >= HOLD_FRAMES) { phase = 'contracted'; holdFrames = 0 }
+    } else { holdFrames = 0 }
+  } else if (phase === 'contracted') {
+    if (angle > config.extendedAbove) {
+      holdFrames += 1
+      if (holdFrames >= HOLD_FRAMES) { phase = 'extended'; holdFrames = 0; count += 1 }
+    } else { holdFrames = 0 }
   }
 
-  return { count, phase }
+  return { count, phase, holdFrames }
 }
