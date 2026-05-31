@@ -30,7 +30,7 @@ export default function App() {
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/fitness-plan" element={<PrivateRoute><FitnessPlan /></PrivateRoute>} />
         <Route path="/nutrition" element={<PrivateRoute><Nutrition /></PrivateRoute>} />
-        <Route path="/posture" element={<PrivateRoute><PostureChecker /></PrivateRoute>} />
+        <Route path="/posture-check" element={<PrivateRoute><PostureChecker /></PrivateRoute>} />
         <Route path="/bmi" element={<PrivateRoute><BMIEstimator /></PrivateRoute>} />
         <Route path="/chatbot" element={<PrivateRoute><Chatbot /></PrivateRoute>} />
         <Route path="/logbook" element={<PrivateRoute><Logbook /></PrivateRoute>} />
