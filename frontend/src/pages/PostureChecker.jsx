@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import DisclaimerBanner from '../components/DisclaimerBanner'
+import useFitnessStore from '../store/fitnessStore'
 import { extractAngles } from '../utils/poseAngles'
 import { EXERCISES, updateRepCount } from '../utils/exerciseThresholds'
 
@@ -8,22 +10,76 @@ const EXERCISE_KEYS = Object.keys(EXERCISES)
 const MEDIAPIPE_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
 const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
 
+// Map ANY exercise name to closest CV posture key
+function mapToPostureKey(name) {
+  if (!name) return 'squat'
+  const n = name.toLowerCase()
+  if (n.includes('squat') || n.includes('lunge') || n.includes('leg press') || n.includes('calf') || n.includes('step up')) return 'squat'
+  if (n.includes('curl') || n.includes('bicep') || n.includes('hammer') || n.includes('row') || n.includes('pull') || n.includes('lat')) return 'bicep_curl'
+  if (n.includes('push') || n.includes('press') || n.includes('chest') || n.includes('fly') || n.includes('dip') || n.includes('plank') || n.includes('tricep') || n.includes('extension')) return 'push_up'
+  if (n.includes('deadlift') || n.includes('rdl') || n.includes('hip') || n.includes('glute') || n.includes('hinge') || n.includes('walk') || n.includes('run') || n.includes('jog') || n.includes('crunch') || n.includes('twist')) return 'deadlift'
+  return 'squat'
+}
+
 export default function PostureChecker() {
-  const videoRef    = useRef(null)
-  const canvasRef   = useRef(null)
+  const { activePlan, postureExercise, setPostureExercise } = useFitnessStore()
+  const location = useLocation()
+  const exerciseData = location.state?.exercise
+
+  const [currentSet, setCurrentSet] = useState(1)
+  const [workoutComplete, setWorkoutComplete] = useState(false)
+
+  const isAutoMode = useMemo(() => {
+    if (!exerciseData) return true // Default to auto for base exercises
+    const key = mapToPostureKey(exerciseData.name)
+    return !!EXERCISES[key]
+  }, [exerciseData])
+
+  const videoRef        = useRef(null)
+  const canvasRef       = useRef(null)
   const landmarkerRef   = useRef(null)
   const drawingUtilsRef = useRef(null)
   const animFrameRef    = useRef(null)
   const repStateRef     = useRef({ count: 0, phase: 'extended' })
 
-  const [selectedExercise, setSelectedExercise] = useState('squat')
-  const [cameraActive, setCameraActive]   = useState(false)
-  const [loading, setLoading]             = useState(false)
-  const [modelReady, setModelReady]       = useState(false)
-  const [repCount, setRepCount]           = useState(0)
-  const [formStatus, setFormStatus]       = useState('idle')
-  const [feedback, setFeedback]           = useState('')
-  const [injuryAlert, setInjuryAlert]     = useState('')
+  const [selectedExercise, setSelectedExercise] = useState('squat') // CV key
+  const [planExSelected, setPlanExSelected]      = useState('')      // plan exercise name
+  const [cameraActive, setCameraActive]  = useState(false)
+  const [loading, setLoading]            = useState(false)
+  const [modelReady, setModelReady]      = useState(false)
+  const [repCount, setRepCount]          = useState(0)
+  const [formStatus, setFormStatus]      = useState('idle')
+  const [feedback, setFeedback]          = useState('')
+  const [injuryAlert, setInjuryAlert]    = useState('')
+
+  // #9 — All unique exercises from entire plan (all days)
+  const planExercises = useMemo(() => {
+    const planContent = activePlan?.weekly_schedule || {}
+    const schedule = planContent?.weekly_schedule || planContent
+    if (!schedule || typeof schedule !== 'object') return []
+    const all = []; const seen = new Set()
+    Object.values(schedule).forEach(dayExs => {
+      if (!Array.isArray(dayExs)) return
+      dayExs.forEach(ex => {
+        const name = ex.exercise || ex.name || ''
+        if (!name || seen.has(name)) return
+        seen.add(name)
+        all.push({ name, key: mapToPostureKey(name), sets: ex.sets, reps: ex.reps, weight: ex.suggested_weight_kg, instructions: ex.instructions })
+      })
+    })
+    return all
+  }, [activePlan])
+
+  const selectedPlanEx = planExercises.find(e => e.name === planExSelected) || null
+
+  // #6 — Auto-select from chatbot sync
+  useEffect(() => {
+    if (postureExercise && EXERCISES[postureExercise]) {
+      setSelectedExercise(postureExercise)
+      setPlanExSelected('')
+      setPostureExercise(null)
+    }
+  }, [postureExercise])
 
   useEffect(() => {
     let cancelled = false
@@ -32,27 +88,20 @@ export default function PostureChecker() {
         const vision = await import('@mediapipe/tasks-vision')
         const { PoseLandmarker, FilesetResolver, DrawingUtils } = vision
         const filesetResolver = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM)
-        const poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
+        const poseLandmarker  = await PoseLandmarker.createFromOptions(filesetResolver, {
           baseOptions: { modelAssetPath: POSE_MODEL, delegate: 'GPU' },
-          runningMode: 'VIDEO',
-          numPoses: 1,
+          runningMode: 'VIDEO', numPoses: 1,
         })
         if (!cancelled) {
           landmarkerRef.current = poseLandmarker
-          const canvas = canvasRef.current
-          const ctx = canvas?.getContext('2d')
+          const ctx = canvasRef.current?.getContext('2d')
           if (ctx) drawingUtilsRef.current = new DrawingUtils(ctx)
           setModelReady(true)
         }
-      } catch {
-        if (!cancelled) setModelReady(false)
-      }
+      } catch { if (!cancelled) setModelReady(false) }
     }
     load()
-    return () => {
-      cancelled = true
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
-    }
+    return () => { cancelled = true; if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current) }
   }, [])
 
   const startCamera = async () => {
@@ -62,155 +111,166 @@ export default function PostureChecker() {
       videoRef.current.srcObject = stream
       await new Promise(resolve => { videoRef.current.onloadedmetadata = resolve })
       videoRef.current.play()
-
-      const vision = await import('@mediapipe/tasks-vision')
-      const { DrawingUtils } = vision
-      const ctx = canvasRef.current.getContext('2d')
-      drawingUtilsRef.current = new DrawingUtils(ctx)
-
+      const { DrawingUtils } = await import('@mediapipe/tasks-vision')
+      drawingUtilsRef.current = new DrawingUtils(canvasRef.current.getContext('2d'))
       setCameraActive(true)
       startDetectionLoop()
-    } catch {
-      setFeedback('Camera access denied. Enable camera permission and try again.')
-    } finally {
-      setLoading(false)
-    }
+    } catch { setFeedback('Camera access denied.') }
+    finally { setLoading(false) }
   }
 
   const stopCamera = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
     videoRef.current?.srcObject?.getTracks().forEach(t => t.stop())
     if (videoRef.current) videoRef.current.srcObject = null
-    setCameraActive(false)
-    setFormStatus('idle')
-    setFeedback('')
-    setInjuryAlert('')
+    setCameraActive(false); setFormStatus('idle'); setFeedback(''); setInjuryAlert('')
   }
 
-  const resetReps = () => {
-    repStateRef.current = { count: 0, phase: 'extended' }
-    setRepCount(0)
+  const resetReps = () => { repStateRef.current = { count: 0, phase: 'extended', holdFrames: 0 }; setRepCount(0) }
+
+  const handleSelectPlanEx = (ex) => {
+    setPlanExSelected(ex.name)
+    setSelectedExercise(ex.key)
+    resetReps()
+    if (cameraActive) stopCamera()
+  }
+
+  const handleSelectBaseEx = (key) => {
+    setSelectedExercise(key)
+    setPlanExSelected('')
+    resetReps()
+    if (cameraActive) stopCamera()
   }
 
   const startDetectionLoop = useCallback(() => {
     const detect = async () => {
-      const video = videoRef.current
-      const canvas = canvasRef.current
+      const video = videoRef.current; const canvas = canvasRef.current
       if (!video || !canvas || video.readyState < 2 || !landmarkerRef.current) {
-        animFrameRef.current = requestAnimationFrame(detect)
-        return
+        animFrameRef.current = requestAnimationFrame(detect); return
       }
-
-      canvas.width  = video.videoWidth
-      canvas.height = video.videoHeight
-
-      const ctx = canvas.getContext('2d')
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height)
       const result = landmarkerRef.current.detectForVideo(video, performance.now())
 
       if (result.landmarks.length > 0) {
         const landmarks = result.landmarks[0]
-        const vision = await import('@mediapipe/tasks-vision')
-        const { PoseLandmarker } = vision
-
+        const { PoseLandmarker } = await import('@mediapipe/tasks-vision')
         if (drawingUtilsRef.current) {
-          drawingUtilsRef.current.drawConnectors(
-            landmarks,
-            PoseLandmarker.POSE_CONNECTIONS,
-            { color: '#5DCAA5', lineWidth: 2 }
-          )
-          drawingUtilsRef.current.drawLandmarks(landmarks, {
-            color: '#0D9373',
-            lineWidth: 1,
-            radius: 3,
-          })
+          drawingUtilsRef.current.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#00E676', lineWidth: 2 })
+          drawingUtilsRef.current.drawLandmarks(landmarks, { color: '#00C853', lineWidth: 1, radius: 3 })
         }
-
         const angles = extractAngles(landmarks)
         if (angles) {
           const exercise = EXERCISES[selectedExercise]
           if (exercise.injuryRisk.check(angles)) {
-            setFormStatus('danger')
-            setInjuryAlert(exercise.injuryRisk.message)
+            setFormStatus('danger'); setInjuryAlert(exercise.injuryRisk.message)
           } else {
             setInjuryAlert('')
-            if (exercise.goodForm(angles)) {
-              setFormStatus('good')
-              setFeedback(exercise.feedback.good)
-            } else {
-              setFormStatus('warning')
-              setFeedback(exercise.feedback.low)
-            }
+            if (exercise.goodForm(angles)) { setFormStatus('good'); setFeedback(exercise.feedback.good) }
+            else { setFormStatus('warning'); setFeedback(exercise.feedback.low) }
           }
           repStateRef.current = updateRepCount(repStateRef.current, angles, selectedExercise)
           setRepCount(repStateRef.current.count)
         }
-      } else {
-        setFormStatus('idle')
-        setFeedback('Stand in frame to begin analysis')
-      }
+      } else { setFormStatus('idle'); setFeedback('Stand in frame to begin analysis') }
 
       animFrameRef.current = requestAnimationFrame(detect)
     }
     animFrameRef.current = requestAnimationFrame(detect)
   }, [selectedExercise])
 
-  const STATUS_BORDER = {
-    idle:    'border-accent/20',
-    good:    'border-accent',
-    warning: 'border-warn',
-    danger:  'border-danger',
-  }
-
+  const STATUS_BORDER = { idle: 'border-border-soft', good: 'border-primary', warning: 'border-warn', danger: 'border-danger' }
   const STATUS_BANNER = {
     danger:  'bg-danger/10 border border-danger/40 text-danger',
-    good:    'bg-accent/10 border border-accent/40 text-accent',
+    good:    'bg-primary/10 border border-primary/40 text-primary',
     warning: 'bg-warn/10 border border-warn/40 text-warn',
-    idle:    'bg-surface border border-white/10 text-text-muted',
+    idle:    'bg-surface border border-border-soft text-text-muted',
   }
+
+  const displayName = planExSelected || EXERCISES[selectedExercise]?.label
 
   return (
     <AppLayout>
-      <h1 className="text-2xl font-bold text-white mb-4">Posture Checker</h1>
+      <div className="mb-5">
+        <p className="text-text-muted text-xs uppercase tracking-widest mb-1">AI-Powered CV</p>
+        <h1 className="page-title">Posture Check</h1>
+      </div>
+
       <DisclaimerBanner message="Posture analysis is approximate. Results vary with lighting and camera angle. Not a medical diagnostic tool." />
 
-      {/* Exercise selector */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {EXERCISE_KEYS.map(key => (
-          <button
-            key={key}
-            onClick={() => { setSelectedExercise(key); resetReps() }}
-            className={`px-3 py-1.5 rounded-lg text-sm transition ${
-              selectedExercise === key
-                ? 'bg-primary text-white font-semibold'
-                : 'bg-surface border border-accent/20 text-text-muted hover:text-white'
-            }`}
-          >
-            {EXERCISES[key].label}
-          </button>
-        ))}
+      <div className="flex items-center gap-3 bg-warn/10 border border-warn/30 rounded-xl px-4 py-3 mb-5">
+        <span className="shrink-0 text-warn text-lg">⚠️</span>
+        <p className="text-warn text-xs font-medium">
+          Safety Reminder: Please have a workout buddy or supervisor present during exercise to avoid injury or exercise failure.
+        </p>
+      </div>
+
+      {/* #9 — All Plan Exercises dropdown */}
+      {planExercises.length > 0 && (
+        <div className="card p-4 mb-4">
+          <p className="stat-label mb-3">From Your Fitness Plan</p>
+          <div className="flex flex-wrap gap-2">
+            {planExercises.map(ex => (
+              <button key={ex.name}
+                onClick={() => handleSelectPlanEx(ex)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                  planExSelected === ex.name
+                    ? 'bg-primary text-bg border-primary shadow-glow-sm'
+                    : 'bg-surface border-border-soft text-text-muted hover:text-text-base hover:border-border-mid'
+                }`}>
+                {ex.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Show selected plan exercise details */}
+          {selectedPlanEx && (
+            <div className="mt-3 pt-3 border-t border-border-soft grid grid-cols-2 md:grid-cols-4 gap-3">
+              {selectedPlanEx.sets && <div><p className="stat-label">Sets</p><p className="text-text-base font-semibold">{selectedPlanEx.sets}</p></div>}
+              {selectedPlanEx.reps && <div><p className="stat-label">Reps</p><p className="text-text-base font-semibold">{selectedPlanEx.reps}</p></div>}
+              {selectedPlanEx.weight > 0 && <div><p className="stat-label">Weight</p><p className="text-warn font-semibold">{selectedPlanEx.weight} kg</p></div>}
+              {selectedPlanEx.key && <div><p className="stat-label">CV Tracking</p><p className="text-primary text-xs font-medium capitalize">{selectedPlanEx.key.replace(/_/g,' ')} pattern</p></div>}
+              {selectedPlanEx.instructions && (
+                <div className="col-span-2 md:col-span-4">
+                  <p className="stat-label">Form Cue</p>
+                  <p className="text-text-muted text-xs leading-relaxed">{selectedPlanEx.instructions}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Base exercises */}
+      <div className="mb-4">
+        <p className="text-text-dim text-xs uppercase tracking-widest mb-2">Base Exercises</p>
+        <div className="flex flex-wrap gap-2">
+          {EXERCISE_KEYS.map(key => (
+            <button key={key} onClick={() => handleSelectBaseEx(key)}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${
+                selectedExercise === key && !planExSelected
+                  ? 'bg-primary text-bg border-primary font-semibold shadow-glow-sm'
+                  : 'bg-surface border-border-soft text-text-muted hover:text-text-base'
+              }`}>
+              {EXERCISES[key].label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Camera viewport */}
-      <div
-        className={`relative bg-surface border-2 rounded-xl overflow-hidden mb-4 ${STATUS_BORDER[formStatus]}`}
-        style={{ aspectRatio: '16/9', maxHeight: 480 }}
-      >
+      <div className={`relative bg-surface border-2 rounded-xl overflow-hidden mb-4 transition-colors duration-500 ${STATUS_BORDER[formStatus]}`}
+        style={{ aspectRatio: '16/9', maxHeight: 480 }}>
         <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
         {!cameraActive && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg/80 gap-4">
             {!modelReady
-              ? <p className="text-text-muted text-sm">Loading AI model…</p>
+              ? <p className="text-text-muted text-sm animate-pulse-soft">Loading AI model…</p>
               : <>
-                  <p className="text-text-muted text-sm">Camera is off</p>
-                  <button
-                    onClick={startCamera}
-                    disabled={loading}
-                    className="bg-primary hover:bg-primary/80 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg transition"
-                  >
+                  <p className="text-text-muted text-sm">Camera off — <span className="text-primary font-medium">{displayName}</span> selected</p>
+                  <button onClick={startCamera} disabled={loading} className="btn-primary">
                     {loading ? 'Starting…' : 'Enable Camera'}
                   </button>
                 </>
@@ -219,53 +279,45 @@ export default function PostureChecker() {
         )}
 
         {cameraActive && (
-          <div className="absolute top-3 right-3 bg-bg/80 border border-accent/30 rounded-xl px-4 py-2 text-center">
-            <p className="text-text-muted text-xs">REPS</p>
-            <p className="text-white text-3xl font-bold">{repCount}</p>
+          <div className="absolute top-3 right-3 bg-bg/80 border border-border-mid rounded-xl px-4 py-2 text-center shadow-glow-sm">
+            <p className="text-text-muted text-[10px] uppercase tracking-widest">REPS</p>
+            <p className="text-primary font-display text-4xl">{repCount}</p>
+            <p className="text-text-dim text-[10px] max-w-20 truncate">{displayName}</p>
           </div>
         )}
       </div>
 
-      {/* Feedback bar */}
       {cameraActive && (
         <div className={`rounded-xl px-5 py-3 mb-3 text-sm font-medium ${STATUS_BANNER[formStatus]}`}>
           {injuryAlert || feedback || 'Stand in frame to begin…'}
         </div>
       )}
 
-      {/* Controls */}
       <div className="flex gap-3 mb-6">
         {cameraActive ? (
           <>
-            <button onClick={stopCamera}
-              className="bg-danger/10 border border-danger/30 text-danger px-4 py-2 rounded-lg text-sm hover:bg-danger/20 transition">
+            <button onClick={stopCamera} className="bg-danger/10 border border-danger/30 text-danger px-4 py-2 rounded-lg text-sm hover:bg-danger/20 transition">
               Stop Camera
             </button>
-            <button onClick={resetReps}
-              className="bg-surface border border-accent/20 text-text-muted px-4 py-2 rounded-lg text-sm hover:text-white transition">
+            <button onClick={resetReps} className="bg-surface border border-border-soft text-text-muted px-4 py-2 rounded-lg text-sm hover:text-text-base transition">
               Reset Reps
             </button>
           </>
         ) : (
-          <button
-            onClick={startCamera}
-            disabled={loading || !modelReady}
-            className="bg-primary hover:bg-primary/80 disabled:opacity-50 text-white px-6 py-2 rounded-lg text-sm transition"
-          >
+          <button onClick={startCamera} disabled={loading || !modelReady} className="btn-primary">
             {loading ? 'Starting…' : !modelReady ? 'Loading model…' : 'Start Camera'}
           </button>
         )}
       </div>
 
-      {/* Instructions */}
-      <div className="bg-surface border border-accent/20 rounded-xl p-5">
-        <h2 className="text-white font-semibold mb-2">How to use</h2>
-        <ol className="text-text-muted text-sm space-y-1 list-decimal list-inside">
-          <li>Select your exercise above</li>
-          <li>Click Enable Camera and allow browser camera access</li>
-          <li>Position yourself so your full body is visible</li>
-          <li>Perform the exercise — reps count automatically</li>
-          <li>Green border = good form · Yellow = adjust · Red = injury risk</li>
+      <div className="card p-5">
+        <h2 className="text-text-base font-semibold mb-3">How to use</h2>
+        <ol className="text-text-muted text-sm space-y-1.5 list-decimal list-inside">
+          <li>Pick any exercise from <span className="text-primary">your plan</span> or choose a base exercise</li>
+          <li>Click <strong>Enable Camera</strong> and allow browser camera access</li>
+          <li>Position so your full body is visible in frame</li>
+          <li>Perform the exercise — reps count automatically via CV</li>
+          <li><span className="text-primary">Green</span> = good form · <span className="text-warn">Yellow</span> = adjust · <span className="text-danger">Red</span> = injury risk</li>
         </ol>
       </div>
     </AppLayout>
