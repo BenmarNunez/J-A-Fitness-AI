@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class FitnessPlan(models.Model):
@@ -44,7 +45,7 @@ class BodyMetric(models.Model):
 
 class RestDay(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rest_days')
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField(default=timezone.now)
     reason = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 

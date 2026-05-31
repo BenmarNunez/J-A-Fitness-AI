@@ -395,9 +395,22 @@ export default function FitnessPlan() {
       )}
 
       {restDayModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="card w-full max-w-md overflow-hidden animate-fade-up">
-            <div className="p-6">
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
+          onClick={() => setRestDayModalOpen(false)}
+        >
+          <div
+            className="bg-[#1a1a1a] rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl relative animate-fade-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setRestDayModalOpen(false)}
+              className="absolute top-4 right-4 text-text-muted hover:text-text-base transition-colors"
+            >
+              <span className="text-xl leading-none">✕</span>
+            </button>
+
+            <div className="pr-6">
               <h3 className="text-lg font-semibold mb-2">Request Rest Day</h3>
               <p className="text-text-muted text-sm mb-4">Tell us why you need a rest day, and we'll adjust your plan for tomorrow.</p>
               <textarea
@@ -407,7 +420,7 @@ export default function FitnessPlan() {
                 onChange={(e) => setRestDayReason(e.target.value)}
               />
             </div>
-            <div className="flex gap-3 p-4 bg-surface border-t border-border-soft">
+            <div className="flex gap-3 mt-6">
               <button onClick={() => setRestDayModalOpen(false)} disabled={restDayLoading} className="flex-1 py-2 text-sm font-medium text-text-muted hover:text-text-base transition-colors">
                 Cancel
               </button>
