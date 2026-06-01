@@ -1,3 +1,4 @@
+import { Component } from 'react'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
@@ -5,6 +6,27 @@ import DisclaimerBanner from '../components/DisclaimerBanner'
 import useFitnessStore from '../store/fitnessStore'
 import { extractAngles } from '../utils/poseAngles'
 import { EXERCISES, updateRepCount } from '../utils/exerciseThresholds'
+
+class ErrorBoundary extends Component {
+  state = { hasError: false }
+  static getDerivedStateFromError() { return { hasError: true } }
+  componentDidCatch(error, errorInfo) { console.error('PostureChecker Error:', error, errorInfo) }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <AppLayout>
+          <div className="flex flex-col items-center justify-center p-6 text-center">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h1 className="text-xl font-bold mb-2">Something went wrong</h1>
+            <p className="text-text-muted mb-6">The posture checker encountered an error and couldn't start.</p>
+            <button onClick={() => window.location.reload()} className="btn-primary">Reload Page</button>
+          </div>
+        </AppLayout>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const EXERCISE_KEYS = Object.keys(EXERCISES)
 const MEDIAPIPE_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
@@ -21,7 +43,7 @@ function mapToPostureKey(name) {
   return 'squat'
 }
 
-export default function PostureChecker() {
+export function PostureCheckerContent() {
   const { activePlan, postureExercise, setPostureExercise } = useFitnessStore()
   const location = useLocation()
   const navigate = useNavigate()
@@ -111,34 +133,23 @@ export default function PostureChecker() {
     }
   }, [postureExercise])
 
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      try {
-        const vision = await import('@mediapipe/tasks-vision')
-        const { PoseLandmarker, FilesetResolver, DrawingUtils } = vision
-        poseConnectionsRef.current = PoseLandmarker.POSE_CONNECTIONS
-        const filesetResolver = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM)
-        const poseLandmarker  = await PoseLandmarker.createFromOptions(filesetResolver, {
-          baseOptions: { modelAssetPath: POSE_MODEL, delegate: 'GPU' },
-          runningMode: 'VIDEO', numPoses: 1,
-        })
-        if (!cancelled) {
-          landmarkerRef.current = poseLandmarker
-          const ctx = canvasRef.current?.getContext('2d')
-          if (ctx) drawingUtilsRef.current = new DrawingUtils(ctx)
-          setModelReady(true)
-        }
-      } catch { if (!cancelled) setModelReady(false) }
-    }
-    load()
-    return () => { cancelled = true; if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current) }
-  }, [])
-
   const startCamera = async () => {
     setLoading(true)
     setCameraError(null)
     try {
+      // 1. Lazy load MediaPipe Model
+      const vision = await import('@mediapipe/tasks-vision')
+      const { PoseLandmarker, FilesetResolver, DrawingUtils } = vision
+      poseConnectionsRef.current = PoseLandmarker.POSE_CONNECTIONS
+      const filesetResolver = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM)
+      const poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: { modelAssetPath: POSE_MODEL, delegate: 'GPU' },
+        runningMode: 'VIDEO', numPoses: 1,
+      })
+      landmarkerRef.current = poseLandmarker
+      setModelReady(true)
+
+      // 2. Request Camera
       const constraints = {
         video: {
           facingMode: 'user',
@@ -156,19 +167,22 @@ export default function PostureChecker() {
       }
       setAspectRatio(video.videoWidth / video.videoHeight)
       video.play()
-      const { DrawingUtils } = await import('@mediapipe/tasks-vision')
-      drawingUtilsRef.current = new DrawingUtils(canvasRef.current.getContext('2d'))
+
+      const ctx = canvasRef.current?.getContext('2d')
+      if (ctx) drawingUtilsRef.current = new DrawingUtils(ctx)
+
       setCameraActive(true)
       startDetectionLoop()
     } catch (err) {
-      console.error('Camera start failed:', err)
+      console.error('Start failed:', err)
       const msg = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'
         ? 'Camera access denied. Please enable camera permissions in your browser settings.'
-        : 'Camera failed to load. Please ensure your camera is connected and not used by another app.'
+        : 'Camera detection unavailable on this device. Use manual counter below.'
       setCameraError(msg)
       setFeedback(msg)
+    } finally {
+      setLoading(false)
     }
-    finally { setLoading(false) }
   }
 
   const stopCamera = () => {
@@ -344,26 +358,24 @@ export default function PostureChecker() {
       )}
 
       {/* Manual Rep Controls */}
-      {!isAutoMode && (
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <button
-            onClick={() => setRepCount(prev => Math.max(0, prev - 1))}
-            className="w-12 h-12 rounded-full bg-surface border border-border-soft text-2xl flex items-center justify-center hover:bg-border-mid transition"
-          >
-            -
-          </button>
-          <div className="text-center">
-            <p className="text-xs text-text-muted uppercase">Manual Reps</p>
-            <p className="text-3xl font-bold">{repCount}</p>
-          </div>
-          <button
-            onClick={() => setRepCount(prev => prev + 1)}
-            className="w-12 h-12 rounded-full bg-primary text-bg text-2xl flex items-center justify-center hover:bg-primary/80 transition"
-          >
-            +
-          </button>
+      <div className="flex items-center justify-center gap-4 mb-4">
+        <button
+          onClick={() => setRepCount(prev => Math.max(0, prev - 1))}
+          className="w-12 h-12 rounded-full bg-surface border border-border-soft text-2xl flex items-center justify-center hover:bg-border-mid transition"
+        >
+          -
+        </button>
+        <div className="text-center">
+          <p className="text-xs text-text-muted uppercase">Manual Reps</p>
+          <p className="text-3xl font-bold">{repCount}</p>
         </div>
-      )}
+        <button
+          onClick={() => setRepCount(prev => prev + 1)}
+          className="w-12 h-12 rounded-full bg-primary text-bg text-2xl flex items-center justify-center hover:bg-primary/80 transition"
+        >
+          +
+        </button>
+      </div>
 
       {/* Camera viewport */}
       <div className={`relative bg-surface border-2 rounded-xl overflow-hidden mb-4 transition-colors duration-500 mx-auto w-full max-w-2xl aspect-[4/3] ${STATUS_BORDER[formStatus]}`}>
@@ -372,7 +384,7 @@ export default function PostureChecker() {
 
         {!cameraActive && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg/80 gap-4 p-4 text-center">
-            {!modelReady
+            {loading
               ? <p className="text-text-muted text-sm animate-pulse-soft">Loading AI model…</p>
               : <>
                   {cameraError && (
@@ -433,8 +445,8 @@ export default function PostureChecker() {
             </button>
           </>
         ) : (
-          <button onClick={startCamera} disabled={loading || !modelReady} className="btn-primary">
-            {loading ? 'Starting…' : !modelReady ? 'Loading model…' : 'Start Camera'}
+          <button onClick={startCamera} disabled={loading} className="btn-primary">
+            {loading ? 'Starting…' : 'Start Camera'}
           </button>
         )}
       </div>
@@ -450,5 +462,13 @@ export default function PostureChecker() {
         </ol>
       </div>
     </AppLayout>
+  )
+}
+
+export default function PostureChecker() {
+  return (
+    <ErrorBoundary>
+      <PostureCheckerContent />
+    </ErrorBoundary>
   )
 }
