@@ -53,8 +53,8 @@ export default function PostureChecker() {
   const [formStatus, setFormStatus]      = useState('idle')
   const [feedback, setFeedback]          = useState('')
   const [injuryAlert, setInjuryAlert]    = useState('')
+  const [cameraError, setCameraError]    = useState(null)
   const [aspectRatio, setAspectRatio]      = useState(4/3)
-  const [dimensions, setDimensions]      = useState({ width: 640, height: 480 })
 
   useEffect(() => {
     if (exerciseData) {
@@ -65,20 +65,6 @@ export default function PostureChecker() {
     }
   }, [exerciseData])
 
-  useEffect(() => {
-    const handleResize = () => {
-      const isMobile = window.innerWidth <= 768;
-      const width = isMobile ? window.innerWidth : 640;
-      setDimensions({
-        width: width,
-        height: width / aspectRatio
-      });
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [aspectRatio])
 
   // #9 — All unique exercises from entire plan (all days)
   const planExercises = useMemo(() => {
@@ -151,8 +137,16 @@ export default function PostureChecker() {
 
   const startCamera = async () => {
     setLoading(true)
+    setCameraError(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+      const constraints = {
+        video: {
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
+      }
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
       videoRef.current.srcObject = stream
       await new Promise(resolve => { videoRef.current.onloadedmetadata = resolve })
       const video = videoRef.current
@@ -166,7 +160,14 @@ export default function PostureChecker() {
       drawingUtilsRef.current = new DrawingUtils(canvasRef.current.getContext('2d'))
       setCameraActive(true)
       startDetectionLoop()
-    } catch { setFeedback('Camera access denied.') }
+    } catch (err) {
+      console.error('Camera start failed:', err)
+      const msg = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'
+        ? 'Camera access denied. Please enable camera permissions in your browser settings.'
+        : 'Camera failed to load. Please ensure your camera is connected and not used by another app.'
+      setCameraError(msg)
+      setFeedback(msg)
+    }
     finally { setLoading(false) }
   }
 
@@ -365,16 +366,20 @@ export default function PostureChecker() {
       )}
 
       {/* Camera viewport */}
-      <div className={`relative bg-surface border-2 rounded-xl overflow-hidden mb-4 transition-colors duration-500 mx-auto ${STATUS_BORDER[formStatus]}`}
-        style={{ width: dimensions.width, height: dimensions.height }}>
+      <div className={`relative bg-surface border-2 rounded-xl overflow-hidden mb-4 transition-colors duration-500 mx-auto w-full max-w-2xl aspect-[4/3] ${STATUS_BORDER[formStatus]}`}>
         <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
         {!cameraActive && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg/80 gap-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg/80 gap-4 p-4 text-center">
             {!modelReady
               ? <p className="text-text-muted text-sm animate-pulse-soft">Loading AI model…</p>
               : <>
+                  {cameraError && (
+                    <div className="bg-danger/20 text-danger text-xs p-3 rounded-lg border border-danger/30 max-w-xs mb-2">
+                      {cameraError}
+                    </div>
+                  )}
                   <p className="text-text-muted text-sm">Camera off — <span className="text-primary font-medium">{displayName}</span> selected</p>
                   <button onClick={startCamera} disabled={loading} className="btn-primary">
                     {loading ? 'Starting…' : 'Enable Camera'}
@@ -383,6 +388,7 @@ export default function PostureChecker() {
             }
           </div>
         )}
+
 
         {cameraActive && (
           <div className="absolute top-3 right-3 bg-bg/80 border border-border-mid rounded-xl px-4 py-2 text-center shadow-glow-sm">
