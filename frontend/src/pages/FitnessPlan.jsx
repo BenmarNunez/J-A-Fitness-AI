@@ -177,7 +177,7 @@ export default function FitnessPlan() {
 
   return (
     <AppLayout>
-      <div className="flex items-end justify-between mb-7">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-7">
         <div className="flex flex-col gap-1">
           <div className="text-text-muted text-[11px] font-medium uppercase tracking-wider">
             {formattedDate} | {formattedTime}
@@ -297,7 +297,7 @@ export default function FitnessPlan() {
                       return (
                         <div key={i} className="py-2.5 first:pt-0 last:pb-0">
                           <div
-                            className="flex items-center gap-4 cursor-pointer group"
+                            className="flex flex-wrap items-center gap-x-4 gap-y-2 cursor-pointer group"
                             onClick={() => setExpandedEx(isOpen ? null : exKey)}
                           >
                             <span className="text-text-dim text-xs w-5 shrink-0 font-mono">{String(i+1).padStart(2,'0')}</span>
@@ -309,11 +309,13 @@ export default function FitnessPlan() {
                                 </span>
                               )}
                             </div>
-                            <span className="text-primary text-xs font-medium shrink-0">{ex.sets}×{ex.reps}</span>
-                            {ex.rest_seconds && <span className="text-text-dim text-xs shrink-0">{ex.rest_seconds}s</span>}
-                            {ex.suggested_weight_kg > 0 && (
-                              <span className="text-warn text-xs font-medium shrink-0">{ex.suggested_weight_kg}kg</span>
-                            )}
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="text-primary text-xs font-medium">{ex.sets}×{ex.reps}</span>
+                              {ex.rest_seconds && <span className="text-text-dim text-xs">{ex.rest_seconds}s</span>}
+                              {ex.suggested_weight_kg > 0 && (
+                                <span className="text-warn text-xs font-medium">{ex.suggested_weight_kg}kg</span>
+                              )}
+                            </div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -329,7 +331,7 @@ export default function FitnessPlan() {
                                   }
                                 });
                               }}
-                              className="btn-primary text-[10px] py-1 px-2 h-fit shrink-0"
+                              className="btn-primary text-[10px] py-1 px-2 h-fit shrink-0 w-full md:w-auto mt-2 md:mt-0"
                             >
                               Start Exercise
                             </button>
