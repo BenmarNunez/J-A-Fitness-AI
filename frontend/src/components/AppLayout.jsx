@@ -15,7 +15,7 @@ export default function AppLayout({ children }) {
           </div>
           <PWAInstallButton />
         </header>
-        <main className="flex-1 px-5 py-7 pb-24 md:pb-8 max-w-5xl w-full mx-auto page-enter">
+        <main className="flex-1 px-5 py-7 pb-24 md:pb-8 max-w-5xl w-full mx-auto">
           {children}
         </main>
       </div>
