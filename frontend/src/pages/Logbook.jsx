@@ -9,6 +9,11 @@ export default function Logbook() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ notes: '', sets: [{ exercise_name: '', sets: 3, reps: 10, weight_kg: '' }] })
   const [saving, setSaving] = useState(false)
+  const [sortOrder, setSortOrder] = useState('desc')
+
+  const sortedLogs = [...workoutLogs].sort((a, b) =>
+    sortOrder === 'desc' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date)
+  )
 
   useEffect(() => {
     api.get('/api/fitness/log/').then(({ data }) => setWorkoutLogs(data)).finally(() => setLoading(false))
@@ -43,10 +48,18 @@ export default function Logbook() {
           <p className="text-text-muted text-xs uppercase tracking-widest mb-1">Training Records</p>
           <h1 className="page-title">Logbook</h1>
         </div>
-        <button onClick={() => setShowForm(!showForm)}
-          className={showForm ? 'btn-ghost' : 'btn-primary'}>
-          {showForm ? '✕ Cancel' : '+ Log Workout'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSortOrder(o => (o === 'desc' ? 'asc' : 'desc'))}
+            className="btn-ghost text-xs"
+          >
+            {sortOrder === 'desc' ? '↓ Newest first' : '↑ Oldest first'}
+          </button>
+          <button onClick={() => setShowForm(!showForm)}
+            className={showForm ? 'btn-ghost' : 'btn-primary'}>
+            {showForm ? '✕ Cancel' : '+ Log Workout'}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -113,7 +126,7 @@ export default function Logbook() {
         </div>
       ) : (
         <div className="space-y-3">
-          {workoutLogs.map(log => (
+          {sortedLogs.map(log => (
             <div key={log.id} className="card p-5">
               <div className="flex items-start justify-between mb-4">
                 <div>
