@@ -49,7 +49,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
         )
         MemberProfile.objects.create(user=user, **profile_data)
-        NotificationPreference.objects.create(user=user)
         return user
 
 

@@ -2,7 +2,7 @@ import pytest
 from datetime import date, timedelta
 from django.core import mail
 from django.contrib.auth import get_user_model
-from apps.users.models import MemberProfile, NotificationPreference
+from apps.users.models import MemberProfile
 from apps.fitness.models import FitnessPlan, WorkoutLog, WorkoutSet
 from apps.users.tasks import send_workout_reminders, send_weekly_summary
 
@@ -27,7 +27,6 @@ def user_with_plan(db, monkeypatch):
         username='sched@example.com', email='sched@example.com', password='pass123',
     )
     MemberProfile.objects.create(user=user, membership_status='active')
-    NotificationPreference.objects.create(user=user)
     FitnessPlan.objects.create(user=user, goal='maintain', weekly_schedule=SCHEDULE, is_active=True)
     return user
 
@@ -90,7 +89,6 @@ def test_workout_reminder_one_bad_plan_does_not_block_others(user_with_plan, mon
         username='badplan@example.com', email='badplan@example.com', password='pass123',
     )
     MemberProfile.objects.create(user=bad_user, membership_status='active')
-    NotificationPreference.objects.create(user=bad_user)
     FitnessPlan.objects.create(user=bad_user, goal='maintain', weekly_schedule='not-a-dict', is_active=True)
 
     send_workout_reminders()

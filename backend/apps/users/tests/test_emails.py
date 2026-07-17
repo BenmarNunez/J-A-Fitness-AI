@@ -1,7 +1,7 @@
 import pytest
 from django.core import mail
 from django.contrib.auth import get_user_model
-from apps.users.models import MemberProfile, NotificationPreference
+from apps.users.models import MemberProfile
 from apps.users.emails import send_plan_update_email, send_workout_reminder_email, send_weekly_summary_email
 
 User = get_user_model()
@@ -14,7 +14,6 @@ def user_with_prefs(db):
         password='pass123', first_name='Jane',
     )
     MemberProfile.objects.create(user=user, membership_status='active')
-    NotificationPreference.objects.create(user=user)
     return user
 
 

@@ -62,7 +62,9 @@ def test_pending_member_blocked_from_notification_prefs(api_client):
     api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
     response = api_client.get('/api/notifications/prefs/')
     assert response.status_code == 403
-    assert NotificationPreference.objects.filter(user=user).count() == 0
+    # A prefs row is created automatically at user-creation time (via signal),
+    # not by this endpoint. The 403 path must not create a second/duplicate row.
+    assert NotificationPreference.objects.filter(user=user).count() == 1
 
 
 @pytest.mark.django_db
@@ -79,3 +81,12 @@ def test_register_creates_notification_preference():
     assert prefs.workout_reminders is True
     assert prefs.plan_updates is True
     assert prefs.weekly_summary is True
+
+
+@pytest.mark.django_db
+def test_notification_preference_created_for_any_new_user_not_just_registration():
+    from apps.users.models import NotificationPreference
+    user = User.objects.create_user(
+        username='directcreate@example.com', email='directcreate@example.com', password='pass123',
+    )
+    assert NotificationPreference.objects.filter(user=user).exists()
