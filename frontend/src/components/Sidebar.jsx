@@ -85,9 +85,17 @@ export default function Sidebar() {
       {/* User + logout */}
       <div className="px-4 py-5 border-t border-border-soft">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm">
-            {user?.first_name?.[0]?.toUpperCase() || 'U'}
-          </div>
+          {user?.profile?.profile_picture ? (
+            <img
+              src={user.profile.profile_picture}
+              alt="Profile"
+              className="w-8 h-8 rounded-full object-cover border border-primary/30"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm">
+              {user?.first_name?.[0]?.toUpperCase() || 'U'}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-text-base text-sm font-medium truncate">{user?.first_name} {user?.last_name}</p>
             <p className="text-text-dim text-xs truncate">{user?.email}</p>
