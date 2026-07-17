@@ -74,3 +74,18 @@ def test_generate_nutrition_plan_works_without_training_context():
             activity_level='moderate',
         )
     assert isinstance(result, dict)
+
+
+def test_generate_nutrition_plan_omits_training_context_section_when_not_provided():
+    mock_response = MagicMock()
+    mock_response.text = '{"calories": 2000, "protein_g": 150, "carbs_g": 200, "fat_g": 60, "meals": {}, "hydration_ml": 2500, "notes": "good"}'
+    with patch('apps.ai_module.gemini._client') as mock_client:
+        mock_client.models.generate_content.return_value = mock_response
+        generate_nutrition_plan(
+            age=25, weight_kg=70, height_cm=175, gender='male',
+            fitness_goal='build_muscle', bmr=1668.75, bmi=22.86,
+            activity_level='moderate',
+        )
+    call_kwargs = mock_client.models.generate_content.call_args.kwargs
+    assert 'training context' not in call_kwargs['contents'].lower()
+    assert 'unknown' not in call_kwargs['contents'].lower()

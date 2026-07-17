@@ -73,12 +73,7 @@ User profile:
   * Light build → higher protein, slight caloric surplus, 5-6 smaller meals
   * Medium build → balanced macros, 3 main meals + 2 snacks
   * Heavy build → caloric deficit, high protein, low simple carbs, more vegetables
-
-Training context:
-- Workout days per week: {workout_days_per_week}
-- Estimated weekly calories burned from training: {estimated_weekly_calories_burned}
-Scale the daily calorie target and macro breakdown to match this training intensity: more workout days or a higher estimated burn should raise the calorie target and protein needs; fewer workout days should lean toward maintenance or a deficit depending on the goal.
-
+{training_context}
 Use authentic Filipino foods such as: kanin (steamed rice), bangus (milkfish), tilapia, tinola, sinigang, adobo (chicken/pork), monggo soup, ensaladang talong, ampalaya, kamote, taho, pandesal, lugaw, champorado, pinakbet, paksiw, grilled liempo, itlog (egg), tokwa (tofu), pechay, kangkong, sayote, ube, calamansi juice, buko (coconut water), etc.
 
 Prioritize locally available, affordable Filipino ingredients. Balance macros while keeping meals culturally appropriate.
@@ -125,14 +120,22 @@ def generate_fitness_plan(*, age, weight_kg, height_cm, gender, fitness_goal, ac
 
 def generate_nutrition_plan(*, age, weight_kg, height_cm, gender, fitness_goal, activity_level, bmr, bmi,
                              body_build='medium', workout_days_per_week=None, estimated_weekly_calories_burned=None):
+    training_context = ''
+    if workout_days_per_week is not None or estimated_weekly_calories_burned is not None:
+        training_context = (
+            "\nTraining context:\n"
+            f"- Workout days per week: {workout_days_per_week if workout_days_per_week is not None else 'unknown'}\n"
+            f"- Estimated weekly calories burned from training: "
+            f"{estimated_weekly_calories_burned if estimated_weekly_calories_burned is not None else 'unknown'}\n"
+            "Scale the daily calorie target and macro breakdown to match this training intensity: more workout "
+            "days or a higher estimated burn should raise the calorie target and protein needs; fewer workout "
+            "days should lean toward maintenance or a deficit depending on the goal.\n"
+        )
     prompt = _NUTRITION_PROMPT.format(
         age=age, weight_kg=weight_kg, height_cm=height_cm, gender=gender,
         fitness_goal=fitness_goal, activity_level=activity_level, bmr=bmr, bmi=bmi,
         body_build=body_build or 'medium',
-        workout_days_per_week=workout_days_per_week if workout_days_per_week is not None else 'unknown',
-        estimated_weekly_calories_burned=(
-            estimated_weekly_calories_burned if estimated_weekly_calories_burned is not None else 'unknown'
-        ),
+        training_context=training_context,
     )
     response = _client.models.generate_content(model=_MODEL, contents=prompt)
     return _parse_json_response(response.text)
