@@ -110,7 +110,7 @@ function ExerciseDemo({ name }) {
 
 export default function FitnessPlan() {
   const { activePlan, setPlans } = useFitnessStore()
-  const { plans: nutritionPlans, setPlans: setNutritionPlans } = useNutritionStore()
+  const { setPlans: setNutritionPlans } = useNutritionStore()
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const [generating, setGenerating] = useState(false)
@@ -122,6 +122,7 @@ export default function FitnessPlan() {
   const [restDayLoading, setRestDayLoading] = useState(false)
   const [restDaySuccess, setRestDaySuccess] = useState(false)
   const [mealPlanReady, setMealPlanReady] = useState(false)
+  const [nutritionNotice, setNutritionNotice] = useState('')
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -153,9 +154,12 @@ export default function FitnessPlan() {
       const { data } = await api.post('/api/fitness/generate/')
       setPlans([data.fitness_plan])
       if (data.nutrition_plan) {
-        setNutritionPlans([data.nutrition_plan, ...nutritionPlans])
+        setNutritionPlans([data.nutrition_plan, ...useNutritionStore.getState().plans])
         setMealPlanReady(true)
         setTimeout(() => setMealPlanReady(false), 6000)
+      } else if (data.nutrition_error) {
+        setNutritionNotice(data.nutrition_error)
+        setTimeout(() => setNutritionNotice(''), 6000)
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'Generation failed. Complete your profile first.')
@@ -410,6 +414,12 @@ export default function FitnessPlan() {
           onClick={() => navigate('/nutrition')}
         >
           <p className="text-sm font-medium">🥗 Meal plan generated too — tap to view →</p>
+        </div>
+      )}
+
+      {nutritionNotice && (
+        <div className="fixed bottom-6 right-24 bg-warn/10 border border-warn/30 text-warn px-4 py-3 rounded-xl shadow-lg animate-fade-up z-50">
+          <p className="text-sm font-medium">⚠️ Meal plan generation failed — you can retry from the Nutrition page.</p>
         </div>
       )}
 
