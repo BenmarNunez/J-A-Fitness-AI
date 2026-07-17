@@ -12,17 +12,27 @@ export default function Settings() {
   const [prefs, setPrefs] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
-    api.get('/api/notifications/prefs/').then(({ data }) => setPrefs(data)).finally(() => setLoading(false))
+    api.get('/api/notifications/prefs/')
+      .then(({ data }) => setPrefs(data))
+      .catch(() => setError('Failed to load notification settings. Try refreshing the page.'))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleToggle = async (key) => {
+    const previous = prefs
     const next = { ...prefs, [key]: !prefs[key] }
     setPrefs(next)
     setSaving(true)
+    setSaveError('')
     try {
       await api.patch('/api/notifications/prefs/', { [key]: next[key] })
+    } catch {
+      setPrefs(previous)
+      setSaveError('Failed to save your change. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -43,6 +53,8 @@ export default function Settings() {
             <div className="space-y-3">
               {[1, 2, 3].map(i => <div key={i} className="shimmer-line h-10" />)}
             </div>
+          ) : error ? (
+            <p className="text-danger text-sm">{error}</p>
           ) : (
             <div className="space-y-5">
               {TOGGLES.map(({ key, label, desc }) => (
@@ -68,6 +80,7 @@ export default function Settings() {
                   </button>
                 </div>
               ))}
+              {saveError && <p className="text-danger text-sm">{saveError}</p>}
             </div>
           )}
         </div>
