@@ -25,6 +25,46 @@ export default function Profile() {
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
 
+  const [pictureFile, setPictureFile] = useState(null)
+  const [picturePreview, setPicturePreview] = useState(null)
+  const [pictureError, setPictureError] = useState('')
+  const [uploadingPicture, setUploadingPicture] = useState(false)
+
+  const handlePictureSelect = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      setPictureError('Only JPG and PNG files are allowed.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPictureError('File must be 5MB or smaller.')
+      return
+    }
+    setPictureError('')
+    setPictureFile(file)
+    setPicturePreview(URL.createObjectURL(file))
+  }
+
+  const handlePictureUpload = async () => {
+    if (!pictureFile) return
+    setUploadingPicture(true); setPictureError('')
+    try {
+      const formData = new FormData()
+      formData.append('picture', pictureFile)
+      const { data } = await api.patch('/api/profile/picture/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setAuth(token, data)
+      setPictureFile(null)
+      setPicturePreview(null)
+    } catch (err) {
+      setPictureError(err.response?.data?.picture?.[0] || 'Upload failed. Try again.')
+    } finally {
+      setUploadingPicture(false)
+    }
+  }
+
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleSubmit = async (e) => {
@@ -54,8 +94,22 @@ export default function Profile() {
         {/* Identity card */}
         <div className="card p-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-primary/12 border border-primary/25 flex items-center justify-center text-primary font-display text-2xl">
-              {user?.first_name?.[0]?.toUpperCase() || 'U'}
+            <div className="relative w-14 h-14 shrink-0">
+              {picturePreview || profile?.profile_picture ? (
+                <img
+                  src={picturePreview || profile.profile_picture}
+                  alt="Profile"
+                  className="w-14 h-14 rounded-full object-cover border border-primary/25"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-primary/12 border border-primary/25 flex items-center justify-center text-primary font-display text-2xl">
+                  {user?.first_name?.[0]?.toUpperCase() || 'U'}
+                </div>
+              )}
+              <label className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary text-bg flex items-center justify-center text-xs cursor-pointer">
+                ✎
+                <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={handlePictureSelect} />
+              </label>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-text-base font-semibold text-lg">{user?.first_name} {user?.last_name}</p>
@@ -65,6 +119,12 @@ export default function Profile() {
               </span>
             </div>
           </div>
+          {pictureError && <p className="text-danger text-xs mt-3">{pictureError}</p>}
+          {pictureFile && (
+            <button onClick={handlePictureUpload} disabled={uploadingPicture} className="btn-primary text-xs mt-3 py-1.5 px-3">
+              {uploadingPicture ? 'Uploading…' : 'Save Photo'}
+            </button>
+          )}
           <div className="mt-5 pt-4 border-t border-border-soft grid grid-cols-2 md:grid-cols-3 gap-4">
             {profile?.bmi && (
               <div><p className="stat-label">BMI</p><p className="text-text-base font-semibold">{profile.bmi}</p></div>
