@@ -13,13 +13,15 @@ def _send(user, subject, message):
         logger.exception('Failed to send email to %s', user.email)
 
 
-def _get_prefs(user):
+def _get_prefs(user, prefs=None):
+    if prefs is not None:
+        return prefs
     prefs, _ = NotificationPreference.objects.get_or_create(user=user)
     return prefs
 
 
-def send_plan_update_email(user, plan_type):
-    if not _get_prefs(user).plan_updates:
+def send_plan_update_email(user, plan_type, prefs=None):
+    if not _get_prefs(user, prefs).plan_updates:
         return
     label = 'fitness plan' if plan_type == 'fitness' else 'nutrition plan'
     _send(
@@ -30,8 +32,8 @@ def send_plan_update_email(user, plan_type):
     )
 
 
-def send_workout_reminder_email(user):
-    if not _get_prefs(user).workout_reminders:
+def send_workout_reminder_email(user, prefs=None):
+    if not _get_prefs(user, prefs).workout_reminders:
         return
     _send(
         user,
@@ -41,8 +43,8 @@ def send_workout_reminder_email(user):
     )
 
 
-def send_weekly_summary_email(user, session_count, total_sets, top_exercises):
-    if not _get_prefs(user).weekly_summary:
+def send_weekly_summary_email(user, session_count, total_sets, top_exercises, prefs=None):
+    if not _get_prefs(user, prefs).weekly_summary:
         return
     top = ', '.join(top_exercises) if top_exercises else 'no exercises logged'
     _send(
