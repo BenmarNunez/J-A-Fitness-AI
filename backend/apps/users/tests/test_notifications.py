@@ -50,3 +50,16 @@ def test_patch_notification_prefs_updates_single_field(auth_client, active_user)
     assert response.data['plan_updates'] is True
     prefs = NotificationPreference.objects.get(user=active_user)
     assert prefs.workout_reminders is False
+
+
+@pytest.mark.django_db
+def test_pending_member_blocked_from_notification_prefs(api_client):
+    user = User.objects.create_user(
+        username='pending@example.com', email='pending@example.com', password='pass123'
+    )
+    MemberProfile.objects.create(user=user, membership_status='pending')
+    token, _ = Token.objects.get_or_create(user=user)
+    api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+    response = api_client.get('/api/notifications/prefs/')
+    assert response.status_code == 403
+    assert NotificationPreference.objects.filter(user=user).count() == 0
