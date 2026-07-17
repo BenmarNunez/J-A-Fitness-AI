@@ -192,3 +192,25 @@ def test_fitness_plan_succeeds_even_if_nutrition_generation_fails(mock_fitness, 
     assert response.data['fitness_plan']['goal'] == 'maintain'
     assert response.data['nutrition_plan'] is None
     assert 'nutrition_error' in response.data
+
+
+@pytest.mark.django_db
+@patch('apps.fitness.views.generate_nutrition_plan')
+@patch('apps.fitness.views.generate_fitness_plan')
+def test_fitness_plan_succeeds_even_if_nutrition_generation_raises(mock_fitness, mock_nutrition, auth_client, active_user):
+    active_user.profile.age = 25
+    active_user.profile.weight_kg = 70
+    active_user.profile.height_cm = 175
+    active_user.profile.gender = 'male'
+    active_user.profile.save()
+    mock_fitness.return_value = {
+        'goal': 'maintain', 'weekly_schedule': {'monday': []}, 'estimated_weekly_calories_burned': 0,
+    }
+    mock_nutrition.side_effect = Exception('simulated Gemini quota error')
+
+    response = auth_client.post('/api/fitness/generate/')
+
+    assert response.status_code == 201
+    assert response.data['fitness_plan']['goal'] == 'maintain'
+    assert response.data['nutrition_plan'] is None
+    assert 'nutrition_error' in response.data

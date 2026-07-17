@@ -1,3 +1,4 @@
+import logging
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
@@ -9,6 +10,8 @@ from apps.nutrition.models import NutritionPlan
 from apps.nutrition.serializers import NutritionPlanSerializer
 from .models import FitnessPlan, WorkoutLog, WorkoutSet, BodyMetric, RestDay
 from .serializers import FitnessPlanSerializer, WorkoutLogSerializer, WorkoutSetSerializer, BodyMetricSerializer, RestDaySerializer
+
+logger = logging.getLogger(__name__)
 
 
 class GenerateFitnessPlanView(APIView):
@@ -52,15 +55,19 @@ class GenerateFitnessPlanView(APIView):
         workout_days = sum(
             1 for entry in schedule.values() if isinstance(entry, list) and len(entry) > 0
         ) if isinstance(schedule, dict) else 0
-        nutrition_data = generate_nutrition_plan(
-            age=profile.age, weight_kg=profile.weight_kg, height_cm=profile.height_cm,
-            gender=profile.gender, fitness_goal=profile.fitness_goal or 'maintain',
-            activity_level=profile.activity_level or 'moderate',
-            bmr=profile.bmr or 0, bmi=profile.bmi or 0,
-            body_build=profile.body_build or 'medium',
-            workout_days_per_week=workout_days,
-            estimated_weekly_calories_burned=plan_data.get('estimated_weekly_calories_burned', 0),
-        )
+        try:
+            nutrition_data = generate_nutrition_plan(
+                age=profile.age, weight_kg=profile.weight_kg, height_cm=profile.height_cm,
+                gender=profile.gender, fitness_goal=profile.fitness_goal or 'maintain',
+                activity_level=profile.activity_level or 'moderate',
+                bmr=profile.bmr or 0, bmi=profile.bmi or 0,
+                body_build=profile.body_build or 'medium',
+                workout_days_per_week=workout_days,
+                estimated_weekly_calories_burned=plan_data.get('estimated_weekly_calories_burned', 0),
+            )
+        except Exception:
+            logger.exception('Nutrition plan generation failed for user %s', request.user.id)
+            nutrition_data = None
         if nutrition_data:
             nutrition_plan = NutritionPlan.objects.create(
                 user=request.user,
