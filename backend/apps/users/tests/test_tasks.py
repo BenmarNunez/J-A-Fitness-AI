@@ -76,6 +76,29 @@ def test_workout_reminder_sent_on_scheduled_unlogged_day(user_with_plan, monkeyp
 
 
 @pytest.mark.django_db
+def test_workout_reminder_one_bad_plan_does_not_block_others(user_with_plan, monkeypatch):
+    import apps.users.tasks as tasks_module
+
+    class FixedDate(date):
+        @classmethod
+        def today(cls):
+            return date(2026, 7, 20)  # a Monday -> workout day in SCHEDULE
+
+    monkeypatch.setattr(tasks_module, 'date', FixedDate)
+
+    bad_user = User.objects.create_user(
+        username='badplan@example.com', email='badplan@example.com', password='pass123',
+    )
+    MemberProfile.objects.create(user=bad_user, membership_status='active')
+    NotificationPreference.objects.create(user=bad_user)
+    FitnessPlan.objects.create(user=bad_user, goal='maintain', weekly_schedule='not-a-dict', is_active=True)
+
+    send_workout_reminders()
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == [user_with_plan.email]
+
+
+@pytest.mark.django_db
 def test_weekly_summary_sent_when_sessions_logged(user_with_plan):
     log = WorkoutLog.objects.create(user=user_with_plan, date=date.today())
     WorkoutSet.objects.create(log=log, exercise_name='Squat', sets=3, reps=10, weight_kg=40)
