@@ -106,9 +106,20 @@ export default function Profile() {
                   {user?.first_name?.[0]?.toUpperCase() || 'U'}
                 </div>
               )}
-              <label className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary text-bg flex items-center justify-center text-xs cursor-pointer">
+              <label
+                htmlFor="profile-picture-input"
+                className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary text-bg flex items-center justify-center text-xs cursor-pointer focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-bg"
+                aria-label="Change profile picture"
+              >
                 ✎
-                <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={handlePictureSelect} />
+                <input
+                  id="profile-picture-input"
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  className="absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0"
+                  style={{ clip: 'rect(0, 0, 0, 0)' }}
+                  onChange={handlePictureSelect}
+                />
               </label>
             </div>
             <div className="flex-1 min-w-0">
