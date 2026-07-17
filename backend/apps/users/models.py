@@ -1,3 +1,4 @@
+from cloudinary.models import CloudinaryField
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.signals import post_save
@@ -44,6 +45,7 @@ class MemberProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     age = models.PositiveIntegerField(null=True, blank=True)
     body_build = models.CharField(max_length=10, choices=BODY_BUILDS, blank=True)
+    profile_picture = CloudinaryField('image', blank=True, null=True)
     weight_kg = models.FloatField(null=True, blank=True)
     height_cm = models.FloatField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=GENDERS, blank=True)
