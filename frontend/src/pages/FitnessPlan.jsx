@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import DisclaimerBanner from '../components/DisclaimerBanner'
 import useFitnessStore from '../store/fitnessStore'
+import useNutritionStore from '../store/nutritionStore'
 import useAuthStore from '../store/authStore'
 import api from '../api'
 
@@ -109,6 +110,7 @@ function ExerciseDemo({ name }) {
 
 export default function FitnessPlan() {
   const { activePlan, setPlans } = useFitnessStore()
+  const { plans: nutritionPlans, setPlans: setNutritionPlans } = useNutritionStore()
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const [generating, setGenerating] = useState(false)
@@ -119,6 +121,7 @@ export default function FitnessPlan() {
   const [restDayReason, setRestDayReason] = useState('')
   const [restDayLoading, setRestDayLoading] = useState(false)
   const [restDaySuccess, setRestDaySuccess] = useState(false)
+  const [mealPlanReady, setMealPlanReady] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -148,7 +151,12 @@ export default function FitnessPlan() {
     setGenerating(true); setError('')
     try {
       const { data } = await api.post('/api/fitness/generate/')
-      setPlans([data])
+      setPlans([data.fitness_plan])
+      if (data.nutrition_plan) {
+        setNutritionPlans([data.nutrition_plan, ...nutritionPlans])
+        setMealPlanReady(true)
+        setTimeout(() => setMealPlanReady(false), 6000)
+      }
     } catch (err) {
       setError(err.response?.data?.detail || 'Generation failed. Complete your profile first.')
     } finally { setGenerating(false) }
@@ -393,6 +401,15 @@ export default function FitnessPlan() {
       {restDaySuccess && (
         <div className="fixed bottom-6 right-6 bg-success text-white px-4 py-3 rounded-xl shadow-lg animate-fade-up z-50 border border-success/20">
           <p className="text-sm font-medium">🌙 Rest day logged. Your plan has been updated.</p>
+        </div>
+      )}
+
+      {mealPlanReady && (
+        <div
+          className="fixed bottom-6 right-24 bg-primary text-bg px-4 py-3 rounded-xl shadow-lg animate-fade-up z-50 border border-primary/20 cursor-pointer"
+          onClick={() => navigate('/nutrition')}
+        >
+          <p className="text-sm font-medium">🥗 Meal plan generated too — tap to view →</p>
         </div>
       )}
 
