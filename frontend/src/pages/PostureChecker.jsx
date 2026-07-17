@@ -66,6 +66,7 @@ export function PostureCheckerContent() {
   const animFrameRef    = useRef(null)
   const poseConnectionsRef = useRef(null)
   const repStateRef     = useRef({ count: 0, phase: 'extended' })
+  const hasLoggedRef    = useRef(false)
 
   const [selectedExercise, setSelectedExercise] = useState('squat') // CV key
   const [planExSelected, setPlanExSelected]      = useState('')      // plan exercise name
@@ -122,7 +123,8 @@ export function PostureCheckerContent() {
       } else {
         setWorkoutComplete(true);
         const exerciseName = exerciseData?.name || selectedPlanEx?.name;
-        if (exerciseName) {
+        if (exerciseName && !hasLoggedRef.current) {
+          hasLoggedRef.current = true;
           api.post('/api/fitness/log/auto/', {
             exercise_name: exerciseName,
             sets: targetSets,
@@ -202,7 +204,7 @@ export function PostureCheckerContent() {
     setCameraActive(false); setFormStatus('idle'); setFeedback(''); setInjuryAlert('')
   }
 
-  const resetReps = () => { repStateRef.current = { count: 0, phase: 'extended', holdFrames: 0 }; setRepCount(0) }
+  const resetReps = () => { repStateRef.current = { count: 0, phase: 'extended', holdFrames: 0 }; setRepCount(0); hasLoggedRef.current = false }
 
   const handleSelectPlanEx = (ex) => {
     setPlanExSelected(ex.name)
