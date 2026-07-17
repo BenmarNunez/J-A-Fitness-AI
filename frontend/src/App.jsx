@@ -13,6 +13,7 @@ import BMIEstimator from './pages/BMIEstimator'
 import Chatbot from './pages/Chatbot'
 import Logbook from './pages/Logbook'
 import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 import AdminDashboard from './pages/AdminDashboard'
 import BodyScanner from './pages/BodyScanner'
 import PWAInstallBanner from './components/PWAInstallBanner'
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/chatbot" element={<PrivateRoute><Chatbot /></PrivateRoute>} />
         <Route path="/logbook" element={<PrivateRoute><Logbook /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
         <Route path="/body-scan" element={<PrivateRoute><BodyScanner /></PrivateRoute>} />
 
         {/* Admin-only */}

@@ -14,6 +14,7 @@ const MORE_TABS = [
   { to: '/bmi',       label: 'BMI',       icon: '⚖️' },
   { to: '/logbook',    label: 'Logbook',   icon: '📖' },
   { to: '/profile',    label: 'Profile',    icon: '👤' },
+  { to: '/settings',   label: 'Settings',   icon: '⚙️' },
 ]
 
 export default function BottomNav() {
