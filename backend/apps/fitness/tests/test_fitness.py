@@ -69,16 +69,16 @@ def test_auto_log_creates_log_for_today(auth_client, active_user):
         'weight_kg': 40.0,
     }, format='json')
     assert response.status_code == 201
-    from datetime import date
-    log = WorkoutLog.objects.get(user=active_user, date=date.today())
+    from django.utils import timezone
+    log = WorkoutLog.objects.get(user=active_user, date=timezone.localdate())
     assert log.sets.count() == 1
     assert log.sets.first().exercise_name == 'Barbell Squat'
 
 
 @pytest.mark.django_db
 def test_auto_log_appends_to_existing_log_same_day(auth_client, active_user):
-    from datetime import date
-    existing_log = WorkoutLog.objects.create(user=active_user, date=date.today())
+    from django.utils import timezone
+    existing_log = WorkoutLog.objects.create(user=active_user, date=timezone.localdate())
     WorkoutSet.objects.create(log=existing_log, exercise_name='Push Up', sets=3, reps=15)
 
     response = auth_client.post('/api/fitness/log/auto/', {
@@ -89,7 +89,7 @@ def test_auto_log_appends_to_existing_log_same_day(auth_client, active_user):
     }, format='json')
 
     assert response.status_code == 201
-    assert WorkoutLog.objects.filter(user=active_user, date=date.today()).count() == 1
+    assert WorkoutLog.objects.filter(user=active_user, date=timezone.localdate()).count() == 1
     existing_log.refresh_from_db()
     assert existing_log.sets.count() == 2
 

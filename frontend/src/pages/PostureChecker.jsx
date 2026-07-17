@@ -204,7 +204,13 @@ export function PostureCheckerContent() {
     setCameraActive(false); setFormStatus('idle'); setFeedback(''); setInjuryAlert('')
   }
 
-  const resetReps = () => { repStateRef.current = { count: 0, phase: 'extended', holdFrames: 0 }; setRepCount(0); hasLoggedRef.current = false }
+  const resetReps = () => {
+    repStateRef.current = { count: 0, phase: 'extended', holdFrames: 0 };
+    setRepCount(0);
+    setCurrentSet(1);
+    setWorkoutComplete(false);
+    hasLoggedRef.current = false;
+  }
 
   const handleSelectPlanEx = (ex) => {
     setPlanExSelected(ex.name)
