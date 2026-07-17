@@ -30,3 +30,6 @@ frontend/.env.local
 .DS_Store
 Thumbs.db
 backend/staticfiles/
+
+# Worktrees
+.worktrees/
