@@ -47,12 +47,15 @@ def send_weekly_summary():
     week_start = today - timedelta(days=6)
     prefs_qs = NotificationPreference.objects.filter(weekly_summary=True).select_related('user')
     for prefs in prefs_qs:
-        user = prefs.user
-        logs = WorkoutLog.objects.filter(user=user, date__gte=week_start, date__lte=today)
-        session_count = logs.count()
-        if session_count == 0:
-            continue
-        sets = WorkoutSet.objects.filter(log__in=logs)
-        total_sets = sets.count()
-        top_exercises = list(sets.values_list('exercise_name', flat=True).distinct()[:3])
-        send_weekly_summary_email(user, session_count, total_sets, top_exercises, prefs=prefs)
+        try:
+            user = prefs.user
+            logs = WorkoutLog.objects.filter(user=user, date__gte=week_start, date__lte=today)
+            session_count = logs.count()
+            if session_count == 0:
+                continue
+            sets = WorkoutSet.objects.filter(log__in=logs)
+            total_sets = sets.count()
+            top_exercises = list(sets.values_list('exercise_name', flat=True).distinct()[:3])
+            send_weekly_summary_email(user, session_count, total_sets, top_exercises, prefs=prefs)
+        except Exception:
+            logger.exception('Failed to process weekly summary for user %s', prefs.user_id)

@@ -63,3 +63,19 @@ def test_pending_member_blocked_from_notification_prefs(api_client):
     response = api_client.get('/api/notifications/prefs/')
     assert response.status_code == 403
     assert NotificationPreference.objects.filter(user=user).count() == 0
+
+
+@pytest.mark.django_db
+def test_register_creates_notification_preference():
+    response = APIClient().post('/api/auth/register/', {
+        'email': 'newprefs@example.com',
+        'first_name': 'New',
+        'last_name': 'User',
+        'password': 'securepass123',
+    }, format='json')
+    assert response.status_code == 201
+    user = User.objects.get(email='newprefs@example.com')
+    prefs = NotificationPreference.objects.get(user=user)
+    assert prefs.workout_reminders is True
+    assert prefs.plan_updates is True
+    assert prefs.weekly_summary is True
