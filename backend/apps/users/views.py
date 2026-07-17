@@ -3,8 +3,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import authenticate, get_user_model
-from .serializers import RegisterSerializer, UserSerializer, MemberProfileSerializer, NotificationPreferenceSerializer
+from .serializers import (
+    RegisterSerializer, UserSerializer, MemberProfileSerializer,
+    NotificationPreferenceSerializer, ProfilePictureUploadSerializer,
+)
 from .models import NotificationPreference
 from .permissions import IsActiveMember, IsAdmin
 
@@ -59,6 +63,20 @@ class ProfileView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
+            return Response(UserSerializer(request.user).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfilePictureView(APIView):
+    permission_classes = [IsActiveMember]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def patch(self, request):
+        serializer = ProfilePictureUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            profile = request.user.profile
+            profile.profile_picture = serializer.validated_data['picture']
+            profile.save()
             return Response(UserSerializer(request.user).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

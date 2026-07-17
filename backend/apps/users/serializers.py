@@ -8,14 +8,20 @@ PROFILE_FIELDS = ['age', 'weight_kg', 'height_cm', 'gender', 'fitness_goal', 'ac
 
 
 class MemberProfileSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField()
+
     class Meta:
         model = MemberProfile
         fields = [
             'age', 'weight_kg', 'height_cm', 'gender',
             'fitness_goal', 'activity_level', 'body_build', 'bmi', 'bmr',
             'membership_status', 'membership_start', 'membership_end',
+            'profile_picture',
         ]
         read_only_fields = ['bmi', 'bmr', 'membership_status', 'membership_start', 'membership_end']
+
+    def get_profile_picture(self, obj):
+        return obj.profile_picture.url if obj.profile_picture else None
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -56,3 +62,14 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = NotificationPreference
         fields = ['workout_reminders', 'plan_updates', 'weekly_summary']
+
+
+class ProfilePictureUploadSerializer(serializers.Serializer):
+    picture = serializers.ImageField()
+
+    def validate_picture(self, value):
+        if value.content_type not in ('image/jpeg', 'image/png'):
+            raise serializers.ValidationError('Only JPG and PNG files are allowed.')
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError('File must be 5MB or smaller.')
+        return value
