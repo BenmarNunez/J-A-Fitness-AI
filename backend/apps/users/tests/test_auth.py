@@ -192,3 +192,44 @@ def test_admin_permission_class():
     assert perm.has_permission(req, None) is True
     req.user = regular_user
     assert perm.has_permission(req, None) is False
+
+
+@pytest.mark.django_db
+def test_profile_update_does_not_clobber_concurrently_uploaded_picture(api_client):
+    """
+    ProfileView.put() must only persist the fields actually submitted.
+    Regression test for a lost-update race: MemberProfileSerializer's
+    default update() calls instance.save() with no update_fields, which
+    writes the entire row -- including whatever stale profile_picture
+    value happened to be loaded onto the in-memory instance. If a picture
+    upload lands in between this view loading the profile and its own
+    save() reaching the database, that picture is silently wiped back to
+    empty. We simulate the "another request wrote to the row in between"
+    scenario via a pre_save signal, since it fires right before the
+    view's serializer.save() reaches the database (same technique as
+    test_picture_upload_does_not_overwrite_concurrently_changed_fields in
+    test_profile_picture.py).
+    """
+    from django.db.models.signals import pre_save
+
+    user = User.objects.create_user(
+        username='racetest@example.com', email='racetest@example.com', password='pass123',
+    )
+    profile = MemberProfile.objects.create(user=user, membership_status='active', age=25)
+    token, _ = Token.objects.get_or_create(user=user)
+    api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+
+    def simulate_concurrent_upload(sender, instance, **kwargs):
+        if instance.pk == profile.pk:
+            MemberProfile.objects.filter(pk=profile.pk).update(profile_picture='concurrently_uploaded_pic')
+
+    pre_save.connect(simulate_concurrent_upload, sender=MemberProfile)
+    try:
+        response = api_client.put('/api/profile/', {'age': 30}, format='json')
+    finally:
+        pre_save.disconnect(simulate_concurrent_upload, sender=MemberProfile)
+
+    assert response.status_code == 200, response.data
+    profile.refresh_from_db()
+    assert profile.age == 30
+    assert str(profile.profile_picture) == 'concurrently_uploaded_pic'

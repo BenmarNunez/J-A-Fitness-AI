@@ -23,6 +23,20 @@ class MemberProfileSerializer(serializers.ModelSerializer):
     def get_profile_picture(self, obj):
         return obj.profile_picture.url if obj.profile_picture else None
 
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        update_fields = list(validated_data.keys())
+        if {'weight_kg', 'height_cm', 'age', 'gender'} & set(update_fields):
+            update_fields += ['bmi', 'bmr']
+        # An empty update_fields list makes Model.save() skip the DB write
+        # entirely (Django: "If update_fields is empty, skip the save"),
+        # so a no-op PATCH/PUT correctly touches nothing rather than
+        # falling back to a full-row save (update_fields=None) that would
+        # reintroduce the lost-update race this override exists to prevent.
+        instance.save(update_fields=update_fields)
+        return instance
+
 
 class UserSerializer(serializers.ModelSerializer):
     profile = MemberProfileSerializer(read_only=True)
