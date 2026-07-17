@@ -117,8 +117,9 @@ from unittest.mock import patch
 
 
 @pytest.mark.django_db
+@patch('apps.fitness.views.generate_nutrition_plan')
 @patch('apps.fitness.views.generate_fitness_plan')
-def test_generate_fitness_plan_sends_update_email(mock_generate, auth_client, active_user):
+def test_generate_fitness_plan_sends_update_email(mock_generate, mock_nutrition, auth_client, active_user):
     from django.core import mail
     active_user.profile.age = 25
     active_user.profile.weight_kg = 70
@@ -130,8 +131,64 @@ def test_generate_fitness_plan_sends_update_email(mock_generate, auth_client, ac
         'weekly_schedule': {'monday': []},
         'estimated_weekly_calories_burned': 1000,
     }
+    mock_nutrition.return_value = None
     mail.outbox.clear()
     response = auth_client.post('/api/fitness/generate/')
     assert response.status_code == 201
     assert len(mail.outbox) == 1
     assert 'fitness plan' in mail.outbox[0].subject.lower()
+
+
+@pytest.mark.django_db
+@patch('apps.fitness.views.generate_nutrition_plan')
+@patch('apps.fitness.views.generate_fitness_plan')
+def test_generate_fitness_plan_also_creates_nutrition_plan(mock_fitness, mock_nutrition, auth_client, active_user):
+    active_user.profile.age = 25
+    active_user.profile.weight_kg = 70
+    active_user.profile.height_cm = 175
+    active_user.profile.gender = 'male'
+    active_user.profile.save()
+    mock_fitness.return_value = {
+        'goal': 'maintain',
+        'weekly_schedule': {
+            'monday': [{'exercise': 'Squat', 'sets': 3, 'reps': 10}],
+            'tuesday': 'rest',
+        },
+        'estimated_weekly_calories_burned': 1200,
+    }
+    mock_nutrition.return_value = {
+        'calories': 2200, 'protein_g': 160, 'carbs_g': 220, 'fat_g': 70,
+        'meals': {'breakfast': [], 'lunch': [], 'dinner': [], 'snacks': []},
+    }
+
+    response = auth_client.post('/api/fitness/generate/')
+
+    assert response.status_code == 201
+    assert response.data['fitness_plan']['goal'] == 'maintain'
+    assert response.data['nutrition_plan']['calories'] == 2200
+    mock_nutrition.assert_called_once()
+    call_kwargs = mock_nutrition.call_args.kwargs
+    assert call_kwargs['workout_days_per_week'] == 1
+    assert call_kwargs['estimated_weekly_calories_burned'] == 1200
+
+
+@pytest.mark.django_db
+@patch('apps.fitness.views.generate_nutrition_plan')
+@patch('apps.fitness.views.generate_fitness_plan')
+def test_fitness_plan_succeeds_even_if_nutrition_generation_fails(mock_fitness, mock_nutrition, auth_client, active_user):
+    active_user.profile.age = 25
+    active_user.profile.weight_kg = 70
+    active_user.profile.height_cm = 175
+    active_user.profile.gender = 'male'
+    active_user.profile.save()
+    mock_fitness.return_value = {
+        'goal': 'maintain', 'weekly_schedule': {'monday': []}, 'estimated_weekly_calories_burned': 0,
+    }
+    mock_nutrition.return_value = None
+
+    response = auth_client.post('/api/fitness/generate/')
+
+    assert response.status_code == 201
+    assert response.data['fitness_plan']['goal'] == 'maintain'
+    assert response.data['nutrition_plan'] is None
+    assert 'nutrition_error' in response.data
