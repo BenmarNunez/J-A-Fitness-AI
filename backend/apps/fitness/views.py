@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.users.permissions import IsActiveMember
 from apps.ai_module.gemini import generate_fitness_plan, generate_rest_day_plan
-from .models import FitnessPlan, WorkoutLog, BodyMetric, RestDay
-from .serializers import FitnessPlanSerializer, WorkoutLogSerializer, BodyMetricSerializer, RestDaySerializer
+from .models import FitnessPlan, WorkoutLog, WorkoutSet, BodyMetric, RestDay
+from .serializers import FitnessPlanSerializer, WorkoutLogSerializer, WorkoutSetSerializer, BodyMetricSerializer, RestDaySerializer
 
 
 class GenerateFitnessPlanView(APIView):
@@ -64,6 +64,19 @@ class WorkoutLogView(APIView):
     def get(self, request):
         logs = WorkoutLog.objects.filter(user=request.user).prefetch_related('sets')
         return Response(WorkoutLogSerializer(logs, many=True).data)
+
+
+class WorkoutAutoLogView(APIView):
+    permission_classes = [IsActiveMember]
+
+    def post(self, request):
+        from datetime import date as date_cls
+        serializer = WorkoutSetSerializer(data=request.data)
+        if serializer.is_valid():
+            log, _ = WorkoutLog.objects.get_or_create(user=request.user, date=date_cls.today())
+            WorkoutSet.objects.create(log=log, **serializer.validated_data)
+            return Response(WorkoutLogSerializer(log).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class BodyMetricView(APIView):
