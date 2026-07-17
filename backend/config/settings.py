@@ -23,6 +23,8 @@ INSTALLED_APPS = [
     'apps.ai_module',
     'apps.equipment',
     'apps.analytics',
+    'django_q',
+    'anymail',
 ]
 
 MIDDLEWARE = [
@@ -105,3 +107,17 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+EMAIL_BACKEND = 'anymail.backends.sendgrid.EmailBackend'
+ANYMAIL = {
+    'SENDGRID_API_KEY': config('SENDGRID_API_KEY', default=''),
+}
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jafitness.ai')
+
+Q_CLUSTER = {
+    'name': 'ja_fitness',
+    'orm': 'default',
+    'workers': 2,
+    'timeout': 60,
+    'retry': 120,
+}
