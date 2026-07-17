@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -70,10 +71,9 @@ class WorkoutAutoLogView(APIView):
     permission_classes = [IsActiveMember]
 
     def post(self, request):
-        from datetime import date as date_cls
         serializer = WorkoutSetSerializer(data=request.data)
         if serializer.is_valid():
-            log, _ = WorkoutLog.objects.get_or_create(user=request.user, date=date_cls.today())
+            log, _ = WorkoutLog.objects.get_or_create(user=request.user, date=timezone.localdate())
             WorkoutSet.objects.create(log=log, **serializer.validated_data)
             return Response(WorkoutLogSerializer(log).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
