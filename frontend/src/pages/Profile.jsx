@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import useAuthStore from '../store/authStore'
@@ -29,6 +29,11 @@ export default function Profile() {
   const [picturePreview, setPicturePreview] = useState(null)
   const [pictureError, setPictureError] = useState('')
   const [uploadingPicture, setUploadingPicture] = useState(false)
+  const [avatarError, setAvatarError] = useState(false)
+
+  useEffect(() => {
+    setAvatarError(false)
+  }, [profile?.profile_picture])
 
   const handlePictureSelect = (e) => {
     const file = e.target.files[0]
@@ -95,11 +100,12 @@ export default function Profile() {
         <div className="card p-6">
           <div className="flex items-center gap-4">
             <div className="relative w-14 h-14 shrink-0">
-              {picturePreview || profile?.profile_picture ? (
+              {picturePreview || (profile?.profile_picture && !avatarError) ? (
                 <img
                   src={picturePreview || profile.profile_picture}
                   alt="Profile"
                   className="w-14 h-14 rounded-full object-cover border border-primary/25"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <div className="w-14 h-14 rounded-full bg-primary/12 border border-primary/25 flex items-center justify-center text-primary font-display text-2xl">

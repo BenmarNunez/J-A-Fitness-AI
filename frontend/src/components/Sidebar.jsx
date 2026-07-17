@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import api from '../api'
@@ -18,6 +19,11 @@ const NAV = [
 export default function Sidebar() {
   const { user, clearAuth } = useAuthStore()
   const navigate = useNavigate()
+  const [avatarError, setAvatarError] = useState(false)
+
+  useEffect(() => {
+    setAvatarError(false)
+  }, [user?.profile?.profile_picture])
 
   const handleLogout = async () => {
     try { await api.post('/api/auth/logout/') } finally {
@@ -85,11 +91,12 @@ export default function Sidebar() {
       {/* User + logout */}
       <div className="px-4 py-5 border-t border-border-soft">
         <div className="flex items-center gap-3 mb-3">
-          {user?.profile?.profile_picture ? (
+          {user?.profile?.profile_picture && !avatarError ? (
             <img
               src={user.profile.profile_picture}
               alt="Profile"
               className="w-8 h-8 rounded-full object-cover border border-primary/30"
+              onError={() => setAvatarError(true)}
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm">
