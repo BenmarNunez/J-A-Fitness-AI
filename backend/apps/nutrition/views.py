@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.users.permissions import IsActiveMember
+from apps.users.emails import send_plan_update_email
 from apps.ai_module.gemini import generate_nutrition_plan, analyze_food_image
 from .models import NutritionPlan, FoodScan
 from .serializers import NutritionPlanSerializer, FoodScanSerializer
@@ -34,6 +35,7 @@ class GenerateNutritionView(APIView):
             carbs_g=plan_data.get('carbs_g'),
             fat_g=plan_data.get('fat_g'),
         )
+        send_plan_update_email(request.user, 'nutrition')
         return Response(NutritionPlanSerializer(plan).data, status=status.HTTP_201_CREATED)
 
 

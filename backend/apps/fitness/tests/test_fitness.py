@@ -111,3 +111,27 @@ def test_auto_log_requires_exercise_name(auth_client):
         'reps': 10,
     }, format='json')
     assert response.status_code == 400
+
+
+from unittest.mock import patch
+
+
+@pytest.mark.django_db
+@patch('apps.fitness.views.generate_fitness_plan')
+def test_generate_fitness_plan_sends_update_email(mock_generate, auth_client, active_user):
+    from django.core import mail
+    active_user.profile.age = 25
+    active_user.profile.weight_kg = 70
+    active_user.profile.height_cm = 175
+    active_user.profile.gender = 'male'
+    active_user.profile.save()
+    mock_generate.return_value = {
+        'goal': 'maintain',
+        'weekly_schedule': {'monday': []},
+        'estimated_weekly_calories_burned': 1000,
+    }
+    mail.outbox.clear()
+    response = auth_client.post('/api/fitness/generate/')
+    assert response.status_code == 201
+    assert len(mail.outbox) == 1
+    assert 'fitness plan' in mail.outbox[0].subject.lower()

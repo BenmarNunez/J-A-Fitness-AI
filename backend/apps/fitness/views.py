@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.users.permissions import IsActiveMember
+from apps.users.emails import send_plan_update_email
 from apps.ai_module.gemini import generate_fitness_plan, generate_rest_day_plan
 from .models import FitnessPlan, WorkoutLog, WorkoutSet, BodyMetric, RestDay
 from .serializers import FitnessPlanSerializer, WorkoutLogSerializer, WorkoutSetSerializer, BodyMetricSerializer, RestDaySerializer
@@ -41,6 +42,7 @@ class GenerateFitnessPlanView(APIView):
             weekly_schedule=plan_data,
             is_active=True,
         )
+        send_plan_update_email(request.user, 'fitness')
         return Response(FitnessPlanSerializer(plan).data, status=status.HTTP_201_CREATED)
 
 
