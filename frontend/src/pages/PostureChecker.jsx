@@ -6,6 +6,7 @@ import DisclaimerBanner from '../components/DisclaimerBanner'
 import useFitnessStore from '../store/fitnessStore'
 import { extractAngles } from '../utils/poseAngles'
 import { EXERCISES, updateRepCount } from '../utils/exerciseThresholds'
+import api from '../api'
 
 class ErrorBoundary extends Component {
   state = { hasError: false }
@@ -120,6 +121,15 @@ export function PostureCheckerContent() {
         repStateRef.current = { count: 0, phase: 'extended', holdFrames: 0 };
       } else {
         setWorkoutComplete(true);
+        const exerciseName = exerciseData?.name || selectedPlanEx?.name;
+        if (exerciseName) {
+          api.post('/api/fitness/log/auto/', {
+            exercise_name: exerciseName,
+            sets: targetSets,
+            reps: targetReps,
+            weight_kg: exerciseData?.weight_kg ?? selectedPlanEx?.weight ?? null,
+          }).catch(err => console.error('Auto-log failed:', err));
+        }
       }
     }
   }, [repCount, exerciseData, selectedPlanEx, currentSet]);
