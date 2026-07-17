@@ -74,3 +74,13 @@ class MemberProfile(models.Model):
 
     def __str__(self):
         return f'{self.user.email} — {self.membership_status}'
+
+
+class NotificationPreference(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_prefs')
+    workout_reminders = models.BooleanField(default=True)
+    plan_updates = models.BooleanField(default=True)
+    weekly_summary = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'NotificationPreference({self.user.email})'

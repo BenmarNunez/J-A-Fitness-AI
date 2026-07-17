@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import MemberProfile
+from .models import MemberProfile, NotificationPreference
 
 User = get_user_model()
 
@@ -50,3 +50,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         MemberProfile.objects.create(user=user, **profile_data)
         return user
+
+
+class NotificationPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificationPreference
+        fields = ['workout_reminders', 'plan_updates', 'weekly_summary']

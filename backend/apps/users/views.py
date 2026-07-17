@@ -4,7 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import authenticate, get_user_model
-from .serializers import RegisterSerializer, UserSerializer, MemberProfileSerializer
+from .serializers import RegisterSerializer, UserSerializer, MemberProfileSerializer, NotificationPreferenceSerializer
+from .models import NotificationPreference
 from .permissions import IsActiveMember, IsAdmin
 
 User = get_user_model()
@@ -85,4 +86,20 @@ class AdminMemberDetailView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(UserSerializer(user).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class NotificationPreferenceView(APIView):
+    permission_classes = [IsActiveMember]
+
+    def get(self, request):
+        prefs, _ = NotificationPreference.objects.get_or_create(user=request.user)
+        return Response(NotificationPreferenceSerializer(prefs).data)
+
+    def patch(self, request):
+        prefs, _ = NotificationPreference.objects.get_or_create(user=request.user)
+        serializer = NotificationPreferenceSerializer(prefs, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
