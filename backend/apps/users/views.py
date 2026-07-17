@@ -76,7 +76,7 @@ class ProfilePictureView(APIView):
         if serializer.is_valid():
             profile = request.user.profile
             profile.profile_picture = serializer.validated_data['picture']
-            profile.save()
+            profile.save(update_fields=['profile_picture'])
             return Response(UserSerializer(request.user).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
