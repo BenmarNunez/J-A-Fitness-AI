@@ -109,9 +109,9 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-EMAIL_BACKEND = 'anymail.backends.sendgrid.EmailBackend'
+EMAIL_BACKEND = 'anymail.backends.resend.EmailBackend'
 ANYMAIL = {
-    'SENDGRID_API_KEY': config('SENDGRID_API_KEY', default=''),
+    'RESEND_API_KEY': config('RESEND_API_KEY', default=''),
 }
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jafitness.ai')
 
