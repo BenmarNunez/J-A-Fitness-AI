@@ -115,11 +115,16 @@ ANYMAIL = {
 }
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@jafitness.ai')
 
+import platform as _platform
+
 Q_CLUSTER = {
     'name': 'ja_fitness',
     'orm': 'default',
     'workers': 2,
-    'timeout': 60,
+    # django-q2's per-task timeout relies on signal.SIGALRM, which doesn't exist on
+    # Windows. Disable it there (task just runs to completion); keep it on Linux
+    # (production) as a safety net against a hung task blocking a worker forever.
+    'timeout': None if _platform.system() == 'Windows' else 60,
     'retry': 120,
 }
 
