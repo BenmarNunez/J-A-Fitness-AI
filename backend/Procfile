@@ -1,1 +1,2 @@
-web: python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi --bind 0.0.0.0:$PORT --timeout 120 --workers 2 --log-file -
+web: python manage.py migrate --noinput && python manage.py setup_email_schedules && python manage.py collectstatic --noinput && gunicorn config.wsgi --bind 0.0.0.0:$PORT --timeout 120 --workers 2 --log-file -
+worker: python manage.py qcluster
